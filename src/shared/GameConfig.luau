@@ -69,7 +69,7 @@ local GameConfig = {}
 
 -- Enable Studio Sandbox Purchases so you can test all Gamepasses & DevProducts
 -- in Roblox Studio before replacing placeholder IDs with live asset IDs.
-GameConfig.STUDIO_SANDBOX_PURCHASES = true
+GameConfig.STUDIO_SANDBOX_PURCHASES = false
 
 -- Core Economy & Pity Tuning
 GameConfig.BASE_ROLL_COOLDOWN = 1.65
