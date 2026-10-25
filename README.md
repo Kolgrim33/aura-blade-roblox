@@ -30,16 +30,28 @@ You can open **`AuraBladeRNG.rbxlx`** directly in Roblox Studio (or sync via [Ro
 
 ---
 
-## 🚀 Quick Start (2 Ways to Open & Publish)
+## 🚀 Quick Start (3 Ways to Open, Patch Monetization IDs & Publish)
 
-### Option A: Open `AuraBladeRNG.rbxlx` Directly in Roblox Studio
-1. Open **`AuraBladeRNG.rbxlx`** in Roblox Studio (on Linux via [Vinegar](https://vinegarhq.org/) or on Windows/macOS).
+### Option A: Launch in Roblox Studio on Linux (via Vinegar) or Windows/macOS
+1. Run `./scripts/launch_studio.sh` (which verifies `org.vinegarhq.Vinegar` via Flatpak and opens `AuraBladeRNG.rbxlx` in Roblox Studio) or open **`AuraBladeRNG.rbxlx`** directly.
 2. Click **Play (F5)** — `STUDIO_SANDBOX_PURCHASES = true` is enabled by default in [`src/shared/GameConfig.luau`](./src/shared/GameConfig.luau), allowing you to test buying every Gamepass and Developer Product for free inside Studio!
 3. When publishing to Roblox:
    - Go to **File -> Publish to Roblox** and enable **Security -> Enable Studio Access to API Services** (for `DataStoreService`).
-   - Create your 6 Gamepasses and 6 Developer Products in the Roblox Creator Dashboard, paste their IDs into `GameConfig.Gamepasses` and `GameConfig.DevProducts` in `ReplicatedStorage.Shared.GameConfig`, and set `STUDIO_SANDBOX_PURCHASES = false`.
 
-### Option B: Live Sync with Rojo
+### Option B: Automated Monetization Patching & Headless Open Cloud Publishing (`scripts/publish_roblox.py`)
+1. Copy [`monetization_ids.template.json`](./monetization_ids.template.json) to `monetization_ids.json` and fill in your 6 Gamepass IDs and 6 Developer Product IDs (or pass them via `--gamepass Key=ID` / `--devproduct Key=ID`).
+2. Patch `src/shared/GameConfig.luau` and rebuild `AuraBladeRNG.rbxlx` automatically:
+   ```bash
+   python3 scripts/publish_roblox.py --config monetization_ids.json --no-sandbox
+   ```
+3. Publish directly to Roblox **without opening Roblox Studio** using a Roblox Open Cloud API Key (`universe-places:write` permission):
+   ```bash
+   ROBLOX_API_KEY="your_open_cloud_api_key" \
+     python3 scripts/publish_roblox.py \
+     --publish --universe-id <UNIVERSE_ID> --place-id <PLACE_ID> --no-sandbox
+   ```
+
+### Option C: Live Sync with Rojo
 ```bash
 rojo serve default.project.json
 # Or build the standalone place file:
