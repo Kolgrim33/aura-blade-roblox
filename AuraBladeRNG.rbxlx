@@ -1,0 +1,3508 @@
+<roblox xmlns:xmime="http://www.w3.org/2005/05/xmlmime" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://www.roblox.com/roblox.xsd" version="4">
+	<External>null</External>
+	<External>nil</External>
+	<Item class="Workspace" referent="RBX_WORKSPACE">
+		<Properties>
+			<string name="Name">Workspace</string>
+			<bool name="FilteringEnabled">true</bool>
+		</Properties>
+	</Item>
+	<Item class="ReplicatedStorage" referent="RBX_REPSTORAGE">
+		<Properties>
+			<string name="Name">ReplicatedStorage</string>
+		</Properties>
+		<Item class="Folder" referent="RBX_SHARED_FOLDER">
+			<Properties>
+				<string name="Name">Shared</string>
+			</Properties>
+			<Item class="ModuleScript" referent="RBX_MOD_GAMECONFIG">
+				<Properties>
+					<string name="Name">GameConfig</string>
+					<ProtectedString name="Source"><![CDATA[--!strict
+--[[
+	GameConfig.luau
+	Central configuration for AURA BLADE: RNG & BOSS ARENA.
+	Defines all 16 Aura/Blade tiers, Gamepasses, Developer Products,
+	Rebirth milestones, Boss waves, Daily Rewards, and Promo Codes.
+]]
+
+export type AuraDefinition = {
+	Id: string,
+	Name: string,
+	Tier: string,
+	OneIn: number, -- 1 in X odds
+	Weight: number,
+	PrimaryColor: Color3,
+	SecondaryColor: Color3,
+	BaseDamage: number,
+	CoinMultiplier: number,
+	SpeedBonus: number,
+	OrbitOrbs: number,
+	HasCutscene: boolean,
+	ServerAnnounce: boolean,
+	Description: string,
+}
+
+export type GamepassInfo = {
+	Key: string,
+	Id: number, -- Replace with real Roblox Gamepass ID on publish
+	Name: string,
+	RobuxPrice: number,
+	IconText: string,
+	AccentColor: Color3,
+	Description: string,
+}
+
+export type DevProductInfo = {
+	Key: string,
+	Id: number, -- Replace with real Roblox Developer Product ID on publish
+	Name: string,
+	RobuxPrice: number,
+	AccentColor: Color3,
+	Description: string,
+}
+
+export type RebirthTier = {
+	Level: number,
+	CoinCost: number,
+	RequiredAuraOneIn: number,
+	PermanentLuckBonus: number, -- e.g. 0.5 = +50% base luck
+	PermanentCoinMultiplier: number,
+	BonusInventorySlots: number,
+	Title: string,
+}
+
+export type BossDefinition = {
+	Id: string,
+	Name: string,
+	MaxHP: number,
+	DamagePerPulse: number,
+	AttackInterval: number,
+	RewardCoins: number,
+	RewardGems: number,
+	RewardFastRolls: number,
+	PrimaryColor: Color3,
+	Scale: number,
+}
+
+local GameConfig = {}
+
+-- Enable Studio Sandbox Purchases so you can test all Gamepasses & DevProducts
+-- in Roblox Studio before replacing placeholder IDs with live asset IDs.
+GameConfig.STUDIO_SANDBOX_PURCHASES = true
+
+-- Core Economy & Pity Tuning
+GameConfig.BASE_ROLL_COOLDOWN = 1.65
+GameConfig.FAST_ROLL_COOLDOWN = 0.55
+GameConfig.BASE_INVENTORY_SLOTS = 24
+GameConfig.EPIC_PITY_THRESHOLD = 50
+GameConfig.LEGENDARY_PITY_THRESHOLD = 250
+GameConfig.PREMIUM_LUCK_BONUS = 0.25 -- +25% Luck for Roblox Premium (drives Engagement Payouts!)
+GameConfig.PREMIUM_COIN_MULTIPLIER = 1.20
+GameConfig.FRIEND_LUCK_BONUS_PER_FRIEND = 0.10 -- +10% Luck per friend in server (max +50%)
+GameConfig.MAX_FRIEND_LUCK_BONUS = 0.50
+GameConfig.OBBY_BUFF_DURATION = 300 -- 5 minutes of +100% Luck from completing the Sky Obby
+GameConfig.OBBY_LUCK_BONUS = 1.00
+GameConfig.VIP_FOUNTAIN_LUCK_BONUS = 0.35
+
+-- 16 Tiered Auras & Cyber Blades (Ordered from Common to Celestial)
+GameConfig.Auras = {
+	{
+		Id = "cyber_spark",
+		Name = "Cyber Spark",
+		Tier = "Common",
+		OneIn = 2,
+		Weight = 500000,
+		PrimaryColor = Color3.fromRGB(160, 175, 195),
+		SecondaryColor = Color3.fromRGB(95, 110, 130),
+		BaseDamage = 12,
+		CoinMultiplier = 1.0,
+		SpeedBonus = 0,
+		OrbitOrbs = 1,
+		HasCutscene = false,
+		ServerAnnounce = false,
+		Description = "A flickering static blade forged from starter neon conduits.",
+	},
+	{
+		Id = "neon_pulse",
+		Name = "Neon Pulse",
+		Tier = "Common",
+		OneIn = 5,
+		Weight = 200000,
+		PrimaryColor = Color3.fromRGB(0, 210, 255),
+		SecondaryColor = Color3.fromRGB(0, 110, 200),
+		BaseDamage = 18,
+		CoinMultiplier = 1.25,
+		SpeedBonus = 1,
+		OrbitOrbs = 1,
+		HasCutscene = false,
+		ServerAnnounce = false,
+		Description = "Streams of high-frequency cyan plasma hum along the katana edge.",
+	},
+	{
+		Id = "emerald_circuit",
+		Name = "Emerald Circuit",
+		Tier = "Uncommon",
+		OneIn = 12,
+		Weight = 83333,
+		PrimaryColor = Color3.fromRGB(40, 255, 130),
+		SecondaryColor = Color3.fromRGB(10, 150, 75),
+		BaseDamage = 26,
+		CoinMultiplier = 1.6,
+		SpeedBonus = 2,
+		OrbitOrbs = 2,
+		HasCutscene = false,
+		ServerAnnounce = false,
+		Description = "Overclocked bio-silicon runes orbit the wielder in twin rings.",
+	},
+	{
+		Id = "cobalt_overdrive",
+		Name = "Cobalt Overdrive",
+		Tier = "Uncommon",
+		OneIn = 30,
+		Weight = 33333,
+		PrimaryColor = Color3.fromRGB(55, 120, 255),
+		SecondaryColor = Color3.fromRGB(120, 180, 255),
+		BaseDamage = 38,
+		CoinMultiplier = 2.1,
+		SpeedBonus = 3,
+		OrbitOrbs = 2,
+		HasCutscene = false,
+		ServerAnnounce = false,
+		Description = "Magnetic turbine cores accelerate every slash.",
+	},
+	{
+		Id = "crimson_blitz",
+		Name = "Crimson Blitz",
+		Tier = "Rare",
+		OneIn = 75,
+		Weight = 13333,
+		PrimaryColor = Color3.fromRGB(255, 50, 80),
+		SecondaryColor = Color3.fromRGB(160, 15, 35),
+		BaseDamage = 55,
+		CoinMultiplier = 3.0,
+		SpeedBonus = 4,
+		OrbitOrbs = 3,
+		HasCutscene = false,
+		ServerAnnounce = false,
+		Description = "High-voltage crimson laser edge that scorches arena targets.",
+	},
+	{
+		Id = "amethyst_phantom",
+		Name = "Amethyst Phantom",
+		Tier = "Rare",
+		OneIn = 200,
+		Weight = 5000,
+		PrimaryColor = Color3.fromRGB(185, 70, 255),
+		SecondaryColor = Color3.fromRGB(95, 25, 165),
+		BaseDamage = 80,
+		CoinMultiplier = 4.2,
+		SpeedBonus = 5,
+		OrbitOrbs = 3,
+		HasCutscene = false,
+		ServerAnnounce = false,
+		Description = "Phase-shifted violet phantoms echo each strike.",
+	},
+	{
+		Id = "solar_flare",
+		Name = "Solar Flare",
+		Tier = "Epic",
+		OneIn = 500,
+		Weight = 2000,
+		PrimaryColor = Color3.fromRGB(255, 185, 35),
+		SecondaryColor = Color3.fromRGB(255, 95, 15),
+		BaseDamage = 120,
+		CoinMultiplier = 6.0,
+		SpeedBonus = 6,
+		OrbitOrbs = 4,
+		HasCutscene = false,
+		ServerAnnounce = false,
+		Description = "Radiant helios corona burning at ten thousand degrees.",
+	},
+	{
+		Id = "frostbite_zero",
+		Name = "Frostbite Zero",
+		Tier = "Epic",
+		OneIn = 1250,
+		Weight = 800,
+		PrimaryColor = Color3.fromRGB(135, 245, 255),
+		SecondaryColor = Color3.fromRGB(45, 155, 255),
+		BaseDamage = 175,
+		CoinMultiplier = 8.5,
+		SpeedBonus = 7,
+		OrbitOrbs = 4,
+		HasCutscene = false,
+		ServerAnnounce = false,
+		Description = "Absolute-zero cryo shards crystallize the air around you.",
+	},
+	{
+		Id = "void_reaper",
+		Name = "Void Reaper",
+		Tier = "Legendary",
+		OneIn = 3500,
+		Weight = 285,
+		PrimaryColor = Color3.fromRGB(130, 30, 220),
+		SecondaryColor = Color3.fromRGB(255, 45, 165),
+		BaseDamage = 260,
+		CoinMultiplier = 13.0,
+		SpeedBonus = 8,
+		OrbitOrbs = 5,
+		HasCutscene = true,
+		ServerAnnounce = false,
+		Description = "Cuts rifts through subspace, drawing dark matter into its wake.",
+	},
+	{
+		Id = "starlight_valkyrie",
+		Name = "Starlight Valkyrie",
+		Tier = "Legendary",
+		OneIn = 10000,
+		Weight = 100,
+		PrimaryColor = Color3.fromRGB(255, 235, 130),
+		SecondaryColor = Color3.fromRGB(120, 220, 255),
+		BaseDamage = 400,
+		CoinMultiplier = 20.0,
+		SpeedBonus = 10,
+		OrbitOrbs = 6,
+		HasCutscene = true,
+		ServerAnnounce = true,
+		Description = "Astral wings andsix star-forged lances command the arena.",
+	},
+	{
+		Id = "abyssal_leviathan",
+		Name = "Abyssal Leviathan",
+		Tier = "Mythic",
+		OneIn = 25000,
+		Weight = 40,
+		PrimaryColor = Color3.fromRGB(0, 255, 195),
+		SecondaryColor = Color3.fromRGB(10, 45, 120),
+		BaseDamage = 620,
+		CoinMultiplier = 32.0,
+		SpeedBonus = 12,
+		OrbitOrbs = 6,
+		HasCutscene = true,
+		ServerAnnounce = true,
+		Description = "Tidal maelstrom of bioluminescent deep-trench energy.",
+	},
+	{
+		Id = "bloodmoon_shogun",
+		Name = "Bloodmoon Shogun",
+		Tier = "Mythic",
+		OneIn = 65000,
+		Weight = 15,
+		PrimaryColor = Color3.fromRGB(255, 25, 55),
+		SecondaryColor = Color3.fromRGB(30, 5, 15),
+		BaseDamage = 950,
+		CoinMultiplier = 50.0,
+		SpeedBonus = 14,
+		OrbitOrbs = 7,
+		HasCutscene = true,
+		ServerAnnounce = true,
+		Description = "Ancient eclipse odachi wreathed in crimson lightning.",
+	},
+	{
+		Id = "omega_singularity",
+		Name = "OMEGA SINGULARITY",
+		Tier = "Mythic",
+		OneIn = 150000,
+		Weight = 7,
+		PrimaryColor = Color3.fromRGB(255, 120, 0),
+		SecondaryColor = Color3.fromRGB(160, 0, 255),
+		BaseDamage = 1450,
+		CoinMultiplier = 80.0,
+		SpeedBonus = 16,
+		OrbitOrbs = 8,
+		HasCutscene = true,
+		ServerAnnounce = true,
+		Description = "A collapsing event horizon bound inside a hyper-dimensional blade.",
+	},
+	{
+		Id = "seraphim_genesis",
+		Name = "SERAPHIM: GENESIS",
+		Tier = "Celestial",
+		OneIn = 400000,
+		Weight = 3,
+		PrimaryColor = Color3.fromRGB(255, 250, 200),
+		SecondaryColor = Color3.fromRGB(255, 180, 60),
+		BaseDamage = 2200,
+		CoinMultiplier = 135.0,
+		SpeedBonus = 18,
+		OrbitOrbs = 9,
+		HasCutscene = true,
+		ServerAnnounce = true,
+		Description = "Nine interlocking golden halos rain judgement across the colosseum.",
+	},
+	{
+		Id = "hyperion_archon",
+		Name = "HYPERION ARCHON",
+		Tier = "Celestial",
+		OneIn = 750000,
+		Weight = 2,
+		PrimaryColor = Color3.fromRGB(80, 255, 255),
+		SecondaryColor = Color3.fromRGB(255, 60, 220),
+		BaseDamage = 3200,
+		CoinMultiplier = 210.0,
+		SpeedBonus = 20,
+		OrbitOrbs = 10,
+		HasCutscene = true,
+		ServerAnnounce = true,
+		Description = "Twin quasars bends spacetime with every heartbeat.",
+	},
+	{
+		Id = "chrono_sovereign",
+		Name = "CHRONO SOVEREIGN",
+		Tier = "Celestial",
+		OneIn = 1000000,
+		Weight = 1,
+		PrimaryColor = Color3.fromRGB(255, 255, 255),
+		SecondaryColor = Color3.fromRGB(0, 240, 255),
+		BaseDamage = 5000,
+		CoinMultiplier = 350.0,
+		SpeedBonus = 24,
+		OrbitOrbs = 12,
+		HasCutscene = true,
+		ServerAnnounce = true,
+		Description = "1 IN 1,000,000. Master of past, present, and eternity.",
+	},
+} :: { AuraDefinition }
+
+-- 6 High-Converting Gamepasses
+GameConfig.Gamepasses = {
+	{
+		Key = "DoubleLuck",
+		Id = 100000001,
+		Name = "2x Luck Forever",
+		RobuxPrice = 199,
+		IconText = "2X LUCK",
+		AccentColor = Color3.fromRGB(45, 255, 130),
+		Description = "Permanently doubles your total Aura Roll Luck across all rolls!",
+	},
+	{
+		Key = "FastRoll",
+		Id = 100000002,
+		Name = "Fast Roll + Skip Cutscene",
+		RobuxPrice = 149,
+		IconText = "FAST",
+		AccentColor = Color3.fromRGB(0, 215, 255),
+		Description = "Cuts roll cooldown by 67% (1.65s -> 0.55s) for rapid-fire rolling!",
+	},
+	{
+		Key = "AutoRoll",
+		Id = 100000003,
+		Name = "Auto-Roll + AFK Guard",
+		RobuxPrice = 99,
+		IconText = "AUTO",
+		AccentColor = Color3.fromRGB(185, 85, 255),
+		Description = "Automatically rolls continuously hands-free and keeps your best Auras!",
+	},
+	{
+		Key = "TripleRoll",
+		Id = 100000004,
+		Name = "Triple Roll (3x At Once)",
+		RobuxPrice = 399,
+		IconText = "3X ROLL",
+		AccentColor = Color3.fromRGB(255, 180, 30),
+		Description = "Roll 3 Auras simultaneously on every single click and keep the rarest!",
+	},
+	{
+		Key = "VIP",
+		Id = 100000005,
+		Name = "VIP Cyber Sovereign",
+		RobuxPrice = 499,
+		IconText = "VIP",
+		AccentColor = Color3.fromRGB(255, 215, 50),
+		Description = "+50% Flux Coins, +25% Base Luck, Golden Overhead Crown, & VIP Lounge Access!",
+	},
+	{
+		Key = "ExtraStorage",
+		Id = 100000006,
+		Name = "+100 Aura Vault Slots",
+		RobuxPrice = 129,
+		IconText = "+100 BAG",
+		AccentColor = Color3.fromRGB(255, 80, 145),
+		Description = "Expands your Aura & Blade inventory capacity by +100 permanent slots!",
+	},
+} :: { GamepassInfo }
+
+-- 6 Repeatable Developer Products (Whale & Impulse Spend Drivers)
+GameConfig.DevProducts = {
+	{
+		Key = "ServerLuckBoost",
+		Id = 200000001,
+		Name = "2x Server Luck Party (15m)",
+		RobuxPrice = 99,
+		AccentColor = Color3.fromRGB(50, 255, 160),
+		Description = "Doubles Aura Luck for EVERYONE in the server for 15 minutes + announces your name!",
+	},
+	{
+		Key = "HeavenlyPotion",
+		Id = 200000002,
+		Name = "Singularity Luck Potion (+500%)",
+		RobuxPrice = 49,
+		AccentColor = Color3.fromRGB(200, 90, 255),
+		Description = "Grants +500% massive Luck on your very next roll (stacks with 2x Luck)!",
+	},
+	{
+		Key = "SummonOmegaBoss",
+		Id = 200000003,
+		Name = "Summon Omega Mech Boss",
+		RobuxPrice = 79,
+		AccentColor = Color3.fromRGB(255, 65, 85),
+		Description = "Immediately spawns the Overlord Mech Boss in the arena with 3x Gem & Coin loot!",
+	},
+	{
+		Key = "GemPackSmall",
+		Id = 200000004,
+		Name = "1,500 Luck Gems",
+		RobuxPrice = 49,
+		AccentColor = Color3.fromRGB(0, 200, 255),
+		Description = "Instant bundle of 1,500 Luck Gems for potions & upgrades.",
+	},
+	{
+		Key = "GemPackMedium",
+		Id = 200000005,
+		Name = "6,000 Luck Gems (+20% Bonus)",
+		RobuxPrice = 169,
+		AccentColor = Color3.fromRGB(95, 140, 255),
+		Description = "High-value bundle of 6,000 Luck Gems!",
+	},
+	{
+		Key = "GemPackMega",
+		Id = 200000006,
+		Name = "25,000 Luck Gems (MEGA VAULT)",
+		RobuxPrice = 599,
+		AccentColor = Color3.fromRGB(255, 200, 40),
+		Description = "Massive 25,000 Luck Gems + 3 Free Singularity Potions!",
+	},
+} :: { DevProductInfo }
+
+-- Gem Shop (F2P & P2W Sink for Luck Gems)
+GameConfig.GemShopItems = {
+	{
+		Id = "gem_heavenly_potion",
+		Name = "Singularity Potion (+500% Next Roll)",
+		GemCost = 250,
+		Description = "Supercharges your next roll with +500% bonus Luck.",
+	},
+	{
+		Id = "gem_fast_rolls_25",
+		Name = "+25 Instant Fast-Roll Tokens",
+		GemCost = 150,
+		Description = "Grants 25 instant zero-cooldown rolls.",
+	},
+	{
+		Id = "gem_vault_slots_10",
+		Name = "+10 Aura Vault Slots",
+		GemCost = 400,
+		Description = "Permanently adds +10 Aura storage slots.",
+	},
+}
+
+-- 10 Progression Rebirth Tiers
+GameConfig.Rebirths = {
+	{ Level = 1, CoinCost = 500, RequiredAuraOneIn = 12, PermanentLuckBonus = 0.25, PermanentCoinMultiplier = 1.35, BonusInventorySlots = 4, Title = "Neon Initiate" },
+	{ Level = 2, CoinCost = 2500, RequiredAuraOneIn = 30, PermanentLuckBonus = 0.55, PermanentCoinMultiplier = 1.75, BonusInventorySlots = 8, Title = "Circuit Runner" },
+	{ Level = 3, CoinCost = 12000, RequiredAuraOneIn = 75, PermanentLuckBonus = 0.90, PermanentCoinMultiplier = 2.25, BonusInventorySlots = 12, Title = "Cyber Ronin" },
+	{ Level = 4, CoinCost = 50000, RequiredAuraOneIn = 200, PermanentLuckBonus = 1.35, PermanentCoinMultiplier = 3.00, BonusInventorySlots = 16, Title = "Phantom Striker" },
+	{ Level = 5, CoinCost = 220000, RequiredAuraOneIn = 500, PermanentLuckBonus = 1.90, PermanentCoinMultiplier = 4.00, BonusInventorySlots = 22, Title = "Solar Vanguard" },
+	{ Level = 6, CoinCost = 950000, RequiredAuraOneIn = 1250, PermanentLuckBonus = 2.60, PermanentCoinMultiplier = 5.50, BonusInventorySlots = 28, Title = "Zero-Kelvin Lord" },
+	{ Level = 7, CoinCost = 4500000, RequiredAuraOneIn = 3500, PermanentLuckBonus = 3.50, PermanentCoinMultiplier = 7.50, BonusInventorySlots = 36, Title = "Void Sovereign" },
+	{ Level = 8, CoinCost = 20000000, RequiredAuraOneIn = 10000, PermanentLuckBonus = 4.75, PermanentCoinMultiplier = 10.5, BonusInventorySlots = 45, Title = "Astral Valkyrie" },
+	{ Level = 9, CoinCost = 100000000, RequiredAuraOneIn = 25000, PermanentLuckBonus = 6.25, PermanentCoinMultiplier = 15.0, BonusInventorySlots = 60, Title = "Abyssal Emperor" },
+	{ Level = 10, CoinCost = 500000000, RequiredAuraOneIn = 150000, PermanentLuckBonus = 8.50, PermanentCoinMultiplier = 25.0, BonusInventorySlots = 80, Title = "OMEGA DEITY" },
+} :: { RebirthTier }
+
+-- Arena Boss Definitions
+GameConfig.Bosses = {
+	{
+		Id = "sentinel_drone",
+		Name = "MK-I Cyber Sentinel",
+		MaxHP = 450,
+		DamagePerPulse = 15,
+		AttackInterval = 3.5,
+		RewardCoins = 350,
+		RewardGems = 25,
+		RewardFastRolls = 2,
+		PrimaryColor = Color3.fromRGB(0, 210, 255),
+		Scale = 1.0,
+	},
+	{
+		Id = "crimson_enforcer",
+		Name = "MK-IV Crimson Enforcer",
+		MaxHP = 1400,
+		DamagePerPulse = 22,
+		AttackInterval = 3.0,
+		RewardCoins = 1200,
+		RewardGems = 55,
+		RewardFastRolls = 4,
+		PrimaryColor = Color3.fromRGB(255, 50, 80),
+		Scale = 1.25,
+	},
+	{
+		Id = "void_colossus",
+		Name = "Void Core Colossus",
+		MaxHP = 4200,
+		DamagePerPulse = 30,
+		AttackInterval = 2.6,
+		RewardCoins = 4000,
+		RewardGems = 120,
+		RewardFastRolls = 8,
+		PrimaryColor = Color3.fromRGB(175, 60, 255),
+		Scale = 1.5,
+	},
+	{
+		Id = "omega_overlord",
+		Name = "OMEGA MECH OVERLORD",
+		MaxHP = 12500,
+		DamagePerPulse = 38,
+		AttackInterval = 2.2,
+		RewardCoins = 15000,
+		RewardGems = 350,
+		RewardFastRolls = 20,
+		PrimaryColor = Color3.fromRGB(255, 145, 0),
+		Scale = 1.85,
+	},
+} :: { BossDefinition }
+
+-- 7-Day Login Streak Rewards (Retention Engine)
+GameConfig.DailyRewards = {
+	{ Day = 1, Coins = 250, Gems = 50, Potions = 0, Label = "250 Coins + 50 Gems" },
+	{ Day = 2, Coins = 600, Gems = 100, Potions = 1, Label = "600 Coins + 1 Singularity Potion" },
+	{ Day = 3, Coins = 1500, Gems = 175, Potions = 1, Label = "1,500 Coins + 175 Gems" },
+	{ Day = 4, Coins = 3500, Gems = 250, Potions = 2, Label = "3,500 Coins + 2 Potions" },
+	{ Day = 5, Coins = 8000, Gems = 400, Potions = 2, Label = "8,000 Coins + 400 Gems" },
+	{ Day = 6, Coins = 18000, Gems = 650, Potions = 3, Label = "18,000 Coins + 3 Potions" },
+	{ Day = 7, Coins = 50000, Gems = 1500, Potions = 5, Label = "JACKPOT: 50K Coins + 1.5K Gems + 5 Potions!" },
+}
+
+-- Redeemable Promo Codes (Social / Discord / TikTok Growth Loop)
+GameConfig.PromoCodes = {
+	["RELEASE"] = { Coins = 1000, Gems = 250, Potions = 1, Description = "Launch Starter Pack!" },
+	["OMEGA2026"] = { Coins = 3500, Gems = 500, Potions = 2, Description = "Omega Update Pack!" },
+	["LUCKY777"] = { Coins = 777, Gems = 777, Potions = 3, Description = "Triple Lucky 777 Drop!" },
+	["CYBERBLADE"] = { Coins = 2500, Gems = 300, Potions = 1, Description = "Cyber Blade Community Reward!" },
+}
+
+-- Helper Lookups
+local auraById: { [string]: AuraDefinition } = {}
+for _, aura in ipairs(GameConfig.Auras) do
+	auraById[aura.Id] = aura
+end
+
+function GameConfig.GetAuraById(auraId: string): AuraDefinition
+	return auraById[auraId] or GameConfig.Auras[1]
+end
+
+function GameConfig.GetGamepassByKey(key: string): GamepassInfo?
+	for _, gp in ipairs(GameConfig.Gamepasses) do
+		if gp.Key == key then
+			return gp
+		end
+	end
+	return nil
+end
+
+function GameConfig.GetGamepassById(id: number): GamepassInfo?
+	for _, gp in ipairs(GameConfig.Gamepasses) do
+		if gp.Id == id then
+			return gp
+		end
+	end
+	return nil
+end
+
+function GameConfig.GetDevProductByKey(key: string): DevProductInfo?
+	for _, dp in ipairs(GameConfig.DevProducts) do
+		if dp.Key == key then
+			return dp
+		end
+	end
+	return nil
+end
+
+function GameConfig.GetDevProductById(id: number): DevProductInfo?
+	for _, dp in ipairs(GameConfig.DevProducts) do
+		if dp.Id == id then
+			return dp
+		end
+	end
+	return nil
+end
+
+function GameConfig.GetRebirthTier(level: number): RebirthTier?
+	return GameConfig.Rebirths[level]
+end
+
+return GameConfig
+]]></ProtectedString>
+				</Properties>
+			</Item>
+			<Item class="ModuleScript" referent="RBX_MOD_ROLLENGINE">
+				<Properties>
+					<string name="Name">RollEngine</string>
+					<ProtectedString name="Source"><![CDATA[--!strict
+--[[
+	RollEngine.luau
+	Weighted RNG & Pity calculation engine for AURA BLADE: RNG & BOSS ARENA.
+	Computes effective player luck from all active sources (Rebirths, Gamepasses,
+	Roblox Premium, Friends in Server, Sky Obby Buff, VIP Fountain, Server Boost,
+	and Singularity Potions) and rolls single or triple Auras.
+]]
+
+local GameConfig = require(script.Parent.GameConfig)
+
+export type LuckContext = {
+	RebirthLevel: number,
+	OwnsDoubleLuck: boolean,
+	OwnsVIP: boolean,
+	IsPremium: boolean,
+	FriendsInServer: number,
+	HasObbyBuff: boolean,
+	HasVipFountainBuff: boolean,
+	ServerBoostActive: boolean,
+	UseHeavenlyPotion: boolean,
+	TotalRolls: number,
+}
+
+export type LuckBreakdown = {
+	BaseLuck: number,
+	AdditiveBonus: number,
+	Multiplier: number,
+	TotalLuck: number,
+	GuaranteedMinOneIn: number,
+}
+
+local RollEngine = {}
+
+function RollEngine.ComputeLuck(ctx: LuckContext): LuckBreakdown
+	local base = 1.0
+	local additive = 0.0
+
+	-- 1. Rebirth permanent luck bonus
+	local rebirthInfo = GameConfig.GetRebirthTier(ctx.RebirthLevel)
+	if rebirthInfo then
+		additive += rebirthInfo.PermanentLuckBonus
+	end
+
+	-- 2. VIP Gamepass (+25% additive base luck)
+	if ctx.OwnsVIP then
+		additive += 0.25
+	end
+
+	-- 3. Roblox Premium subscriber bonus (+25% luck)
+	if ctx.IsPremium then
+		additive += GameConfig.PREMIUM_LUCK_BONUS
+	end
+
+	-- 4. Friends in server viral bonus (+10% per friend, up to +50%)
+	local friendBonus = math.min(
+		ctx.FriendsInServer * GameConfig.FRIEND_LUCK_BONUS_PER_FRIEND,
+		GameConfig.MAX_FRIEND_LUCK_BONUS
+	)
+	additive += friendBonus
+
+	-- 5. Sky Obby completion buff (+100% luck for 5 minutes)
+	if ctx.HasObbyBuff then
+		additive += GameConfig.OBBY_LUCK_BONUS
+	end
+
+	-- 6. VIP Fountain aura buff (+35% luck)
+	if ctx.HasVipFountainBuff then
+		additive += GameConfig.VIP_FOUNTAIN_LUCK_BONUS
+	end
+
+	-- 7. Singularity Potion (+500% next-roll burst)
+	if ctx.UseHeavenlyPotion then
+		additive += 5.0
+	end
+
+	-- Multiplicative stacks (2x Luck Gamepass & 2x Server Luck Party)
+	local mult = 1.0
+	if ctx.OwnsDoubleLuck then
+		mult *= 2.0
+	end
+	if ctx.ServerBoostActive then
+		mult *= 2.0
+	end
+
+	local totalLuck = (base + additive) * mult
+
+	-- Pity floor calculation (next roll index = TotalRolls + 1)
+	local nextRollNumber = ctx.TotalRolls + 1
+	local guaranteedMinOneIn = 0
+	if nextRollNumber % GameConfig.LEGENDARY_PITY_THRESHOLD == 0 then
+		guaranteedMinOneIn = 3500 -- Guaranteed Legendary+
+	elseif nextRollNumber % GameConfig.EPIC_PITY_THRESHOLD == 0 then
+		guaranteedMinOneIn = 500 -- Guaranteed Epic+
+	end
+
+	return {
+		BaseLuck = base,
+		AdditiveBonus = additive,
+		Multiplier = mult,
+		TotalLuck = totalLuck,
+		GuaranteedMinOneIn = guaranteedMinOneIn,
+	}
+end
+
+--[[
+	Rolls a single Aura using luck-scaled inverse-odds weighting.
+	Higher luck boosts rare aura weights proportionally while clamping common weights
+	so players genuinely feel every multiplier & potion!
+]]
+function RollEngine.RollSingle(ctx: LuckContext, rng: Random?): (GameConfig.AuraDefinition, LuckBreakdown)
+	local randomGen = rng or Random.new()
+	local breakdown = RollEngine.ComputeLuck(ctx)
+	local luck = breakdown.TotalLuck
+
+	-- Iterate from rarest (Celestial) down to Common
+	for i = #GameConfig.Auras, 1, -1 do
+		local aura = GameConfig.Auras[i]
+		if aura.OneIn >= breakdown.GuaranteedMinOneIn then
+			-- Effective 1-in-N odds scaled by total luck
+			local effectiveOneIn = math.max(1.0, aura.OneIn / luck)
+			local roll = randomGen:NextNumber() * effectiveOneIn
+			if roll <= 1.0 then
+				return aura, breakdown
+			end
+		end
+	end
+
+	-- Fallback to guaranteed pity tier if triggered
+	if breakdown.GuaranteedMinOneIn > 0 then
+		for _, aura in ipairs(GameConfig.Auras) do
+			if aura.OneIn >= breakdown.GuaranteedMinOneIn then
+				return aura, breakdown
+			end
+		end
+	end
+
+	return GameConfig.Auras[1], breakdown
+end
+
+--[[
+	Rolls 1 or 3 Auras (when TripleRoll Gamepass is owned) and returns
+	the best Aura rolled along with all rolled Auras for the UI display.
+]]
+function RollEngine.RollBatch(
+	ctx: LuckContext,
+	tripleRoll: boolean,
+	rng: Random?
+): (GameConfig.AuraDefinition, { GameConfig.AuraDefinition }, LuckBreakdown)
+	local count = if tripleRoll then 3 else 1
+	local allRolled: { GameConfig.AuraDefinition } = {}
+	local bestAura: GameConfig.AuraDefinition? = nil
+	local firstBreakdown: LuckBreakdown? = nil
+
+	for i = 1, count do
+		local subCtx: LuckContext = table.clone(ctx)
+		subCtx.TotalRolls = ctx.TotalRolls + (i - 1)
+		-- Heavenly Potion applies to the primary roll of the batch
+		if i > 1 then
+			subCtx.UseHeavenlyPotion = false
+		end
+		local rolled, breakdown = RollEngine.RollSingle(subCtx, rng)
+		if not firstBreakdown then
+			firstBreakdown = breakdown
+		end
+		table.insert(allRolled, rolled)
+		if not bestAura or rolled.OneIn > bestAura.OneIn then
+			bestAura = rolled
+		end
+	end
+
+	return bestAura :: GameConfig.AuraDefinition, allRolled, firstBreakdown :: LuckBreakdown
+end
+
+return RollEngine
+]]></ProtectedString>
+				</Properties>
+			</Item>
+		</Item>
+	</Item>
+	<Item class="ServerScriptService" referent="RBX_SSS">
+		<Properties>
+			<string name="Name">ServerScriptService</string>
+		</Properties>
+		<Item class="Folder" referent="RBX_SERVER_FOLDER">
+			<Properties>
+				<string name="Name">Server</string>
+			</Properties>
+			<Item class="ModuleScript" referent="RBX_MOD_DATAMGR">
+				<Properties>
+					<string name="Name">DataManager</string>
+					<ProtectedString name="Source"><![CDATA[--!strict
+--[[
+	DataManager.luau
+	Server-side DataStoreService persistence & OrderedDataStore leaderboard manager.
+	Features:
+	- Exponential backoff retry on GetAsync / UpdateAsync
+	- Schema migration & default profile hydration
+	- Idempotent PurchaseHistory ring-buffer for ProcessReceipt
+	- Auto-save loop & BindToClose graceful shutdown
+]]
+
+local DataStoreService = game:GetService("DataStoreService")
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+
+local GameConfig = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("GameConfig"))
+
+export type PlayerProfile = {
+	SchemaVersion: number,
+	Coins: number,
+	Gems: number,
+	TotalRolls: number,
+	Rebirths: number,
+	BestAuraId: string,
+	BestAuraOneIn: number,
+	EquippedAuraId: string,
+	OwnedAuras: { string },
+	HeavenlyPotions: number,
+	FastRollTokens: number,
+	BonusVaultSlots: number,
+	BossKills: number,
+	TotalDamageDealt: number,
+	LastDailyClaimDay: number,
+	DailyStreak: number,
+	RedeemedCodes: { [string]: boolean },
+	OwnedGamepasses: { [string]: boolean },
+	ProcessedReceipts: { string },
+	AutoRollEnabled: boolean,
+	MinKeepOneIn: number,
+}
+
+local PROFILE_STORE_NAME = "AuraBladeProfile_v1"
+local MAX_RECEIPT_HISTORY = 75
+
+local DataManager = {}
+DataManager.Profiles = {} :: { [Player]: PlayerProfile }
+DataManager.Dirty = {} :: { [Player]: boolean }
+
+local isStudio = RunService:IsStudio()
+local profileStore: DataStore? = nil
+local bestAuraLeaderboard: OrderedDataStore? = nil
+local rebirthLeaderboard: OrderedDataStore? = nil
+
+pcall(function()
+	profileStore = DataStoreService:GetDataStore(PROFILE_STORE_NAME)
+	bestAuraLeaderboard = DataStoreService:GetOrderedDataStore("AuraBlade_BestAura_v1")
+	rebirthLeaderboard = DataStoreService:GetOrderedDataStore("AuraBlade_Rebirths_v1")
+end)
+
+function DataManager.CreateDefaultProfile(): PlayerProfile
+	return {
+		SchemaVersion = 1,
+		Coins = 150,
+		Gems = 50,
+		TotalRolls = 0,
+		Rebirths = 0,
+		BestAuraId = "cyber_spark",
+		BestAuraOneIn = 2,
+		EquippedAuraId = "cyber_spark",
+		OwnedAuras = { "cyber_spark" },
+		HeavenlyPotions = 1, -- Give new players 1 free Singularity Potion to hook them early!
+		FastRollTokens = 5,
+		BonusVaultSlots = 0,
+		BossKills = 0,
+		TotalDamageDealt = 0,
+		LastDailyClaimDay = 0,
+		DailyStreak = 0,
+		RedeemedCodes = {},
+		OwnedGamepasses = {},
+		ProcessedReceipts = {},
+		AutoRollEnabled = false,
+		MinKeepOneIn = 1,
+	}
+end
+
+local function reconcileProfile(raw: any): PlayerProfile
+	local def = DataManager.CreateDefaultProfile()
+	if type(raw) ~= "table" then
+		return def
+	end
+	for k, v in pairs(def :: any) do
+		if raw[k] == nil then
+			raw[k] = v
+		end
+	end
+	return raw :: PlayerProfile
+end
+
+function DataManager.LoadProfile(player: Player): PlayerProfile
+	local key = "Player_" .. tostring(player.UserId)
+	local loadedData: any = nil
+
+	if profileStore then
+		for attempt = 1, 3 do
+			local ok, result = pcall(function()
+				return profileStore:GetAsync(key)
+			end)
+			if ok then
+				loadedData = result
+				break
+			else
+				if not isStudio then
+					warn(string.format("[DataManager] GetAsync attempt %d failed for %s: %s", attempt, player.Name, tostring(result)))
+				end
+				task.wait(0.5 * attempt)
+			end
+		end
+	end
+
+	local profile = reconcileProfile(loadedData)
+	DataManager.Profiles[player] = profile
+	DataManager.Dirty[player] = false
+
+	DataManager.SyncLeaderstats(player)
+	return profile
+end
+
+function DataManager.GetProfile(player: Player): PlayerProfile?
+	return DataManager.Profiles[player]
+end
+
+function DataManager.MarkDirty(player: Player)
+	DataManager.Dirty[player] = true
+	DataManager.SyncLeaderstats(player)
+end
+
+function DataManager.GetMaxVaultSlots(player: Player): number
+	local profile = DataManager.Profiles[player]
+	if not profile then
+		return GameConfig.BASE_INVENTORY_SLOTS
+	end
+	local slots = GameConfig.BASE_INVENTORY_SLOTS + profile.BonusVaultSlots
+	local rebirthInfo = GameConfig.GetRebirthTier(profile.Rebirths)
+	if rebirthInfo then
+		slots += rebirthInfo.BonusInventorySlots
+	end
+	if profile.OwnedGamepasses["ExtraStorage"] then
+		slots += 100
+	end
+	return slots
+end
+
+function DataManager.SyncLeaderstats(player: Player)
+	local profile = DataManager.Profiles[player]
+	if not profile then
+		return
+	end
+
+	local leaderstats = player:FindFirstChild("leaderstats") :: Folder?
+	if not leaderstats then
+		leaderstats = Instance.new("Folder")
+		leaderstats.Name = "leaderstats"
+		leaderstats.Parent = player
+	end
+
+	local function setStat(name: string, value: any, className: string)
+		local stat = leaderstats:FindFirstChild(name)
+		if not stat then
+			stat = Instance.new(className)
+			stat.Name = name
+			stat.Parent = leaderstats
+		end
+		(stat :: any).Value = value
+	end
+
+	local bestAura = GameConfig.GetAuraById(profile.BestAuraId)
+	setStat("Aura", bestAura.Name, "StringValue")
+	setStat("Rolls", profile.TotalRolls, "IntValue")
+	setStat("Rebirths", profile.Rebirths, "IntValue")
+	setStat("Coins", math.floor(profile.Coins), "IntValue")
+end
+
+function DataManager.SaveProfile(player: Player, force: boolean?): boolean
+	local profile = DataManager.Profiles[player]
+	if not profile then
+		return false
+	end
+	if not force and not DataManager.Dirty[player] then
+		return true
+	end
+
+	local key = "Player_" .. tostring(player.UserId)
+	if profileStore then
+		for attempt = 1, 3 do
+			local ok, err = pcall(function()
+				profileStore:UpdateAsync(key, function(_old)
+					return profile
+				end)
+			end)
+			if ok then
+				DataManager.Dirty[player] = false
+				break
+			else
+				if not isStudio then
+					warn(string.format("[DataManager] UpdateAsync failed (%d) for %s: %s", attempt, player.Name, tostring(err)))
+				end
+				task.wait(0.5 * attempt)
+			end
+		end
+	end
+
+	-- Update Global OrderedDataStores
+	if bestAuraLeaderboard and profile.BestAuraOneIn > 2 then
+		pcall(function()
+			bestAuraLeaderboard:SetAsync(key, profile.BestAuraOneIn)
+		end)
+	end
+	if rebirthLeaderboard and profile.Rebirths > 0 then
+		pcall(function()
+			rebirthLeaderboard:SetAsync(key, profile.Rebirths)
+		end)
+	end
+
+	return true
+end
+
+function DataManager.RecordReceipt(profile: PlayerProfile, purchaseId: string)
+	table.insert(profile.ProcessedReceipts, purchaseId)
+	while #profile.ProcessedReceipts > MAX_RECEIPT_HISTORY do
+		table.remove(profile.ProcessedReceipts, 1)
+	end
+end
+
+function DataManager.HasProcessedReceipt(profile: PlayerProfile, purchaseId: string): boolean
+	return table.find(profile.ProcessedReceipts, purchaseId) ~= nil
+end
+
+function DataManager.CleanupPlayer(player: Player)
+	DataManager.SaveProfile(player, true)
+	DataManager.Profiles[player] = nil
+	DataManager.Dirty[player] = nil
+end
+
+-- Periodic Auto-Save & Graceful Shutdown
+function DataManager.StartAutoSaveLoop()
+	task.spawn(function()
+		while true do
+			task.wait(90)
+			for _, player in ipairs(Players:GetPlayers()) do
+				DataManager.SaveProfile(player, false)
+			end
+		end
+	end)
+
+	game:BindToClose(function()
+		for _, player in ipairs(Players:GetPlayers()) do
+			task.spawn(function()
+				DataManager.SaveProfile(player, true)
+			end)
+		end
+		task.wait(2)
+	end)
+end
+
+return DataManager
+]]></ProtectedString>
+				</Properties>
+			</Item>
+			<Item class="ModuleScript" referent="RBX_MOD_MONETIZATION">
+				<Properties>
+					<string name="Name">MonetizationServer</string>
+					<ProtectedString name="Source"><![CDATA[--!strict
+--[[
+	MonetizationServer.luau
+	Complete Robux & Gem monetization system for AURA BLADE: RNG & BOSS ARENA.
+	Handles:
+	- MarketplaceService.ProcessReceipt (idempotent Developer Products)
+	- Gamepass ownership checks & PromptGamePassPurchaseFinished live grants
+	- Studio Sandbox Purchase Mode (test all passes & products in Studio for free!)
+	- Server-wide 2x Luck Party Boost timer
+	- Friend-in-Server viral luck bonus & Roblox Premium EBP multiplier
+]]
+
+local MarketplaceService = game:GetService("MarketplaceService")
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+
+local GameConfig = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("GameConfig"))
+local DataManager = require(script.Parent.DataManager)
+
+local MonetizationServer = {}
+MonetizationServer.ServerLuckEndTime = 0
+MonetizationServer.ServerBoostSponsor = ""
+MonetizationServer.OnServerAnnouncement = nil :: ((string, Color3) -> ())?
+MonetizationServer.OnForceSpawnOmegaBoss = nil :: ((Player) -> ())?
+MonetizationServer.OnProfileUpdated = nil :: ((Player) -> ())?
+
+function MonetizationServer.IsServerBoostActive(): boolean
+	return os.time() < MonetizationServer.ServerLuckEndTime
+end
+
+function MonetizationServer.GetServerBoostRemaining(): number
+	return math.max(0, MonetizationServer.ServerLuckEndTime - os.time())
+end
+
+function MonetizationServer.SyncPlayerGamepasses(player: Player)
+	local profile = DataManager.GetProfile(player)
+	if not profile then
+		return
+	end
+
+	for _, gp in ipairs(GameConfig.Gamepasses) do
+		if not profile.OwnedGamepasses[gp.Key] then
+			local ok, owns = pcall(function()
+				return MarketplaceService:UserOwnsGamePassAsync(player.UserId, gp.Id)
+			end)
+			if ok and owns then
+				profile.OwnedGamepasses[gp.Key] = true
+			end
+		end
+	end
+end
+
+function MonetizationServer.OwnsGamepass(player: Player, key: string): boolean
+	local profile = DataManager.GetProfile(player)
+	if not profile then
+		return false
+	end
+	return profile.OwnedGamepasses[key] == true
+end
+
+function MonetizationServer.CountFriendsInServer(player: Player): number
+	local count = 0
+	for _, other in ipairs(Players:GetPlayers()) do
+		if other ~= player then
+			local ok, isFriend = pcall(function()
+				return player:IsFriendsWith(other.UserId)
+			end)
+			if ok and isFriend then
+				count += 1
+			end
+		end
+	end
+	return count
+end
+
+function MonetizationServer.GrantDevProductByKey(player: Player, key: string): boolean
+	local profile = DataManager.GetProfile(player)
+	if not profile then
+		return false
+	end
+
+	if key == "ServerLuckBoost" then
+		local now = os.time()
+		local baseTime = math.max(now, MonetizationServer.ServerLuckEndTime)
+		MonetizationServer.ServerLuckEndTime = baseTime + (15 * 60)
+		MonetizationServer.ServerBoostSponsor = player.DisplayName
+		if MonetizationServer.OnServerAnnouncement then
+			MonetizationServer.OnServerAnnouncement(
+				string.format("⚡ %s activated 2X SERVER LUCK PARTY for 15 minutes!", player.DisplayName),
+				Color3.fromRGB(50, 255, 160)
+			)
+		end
+	elseif key == "HeavenlyPotion" then
+		profile.HeavenlyPotions += 1
+	elseif key == "SummonOmegaBoss" then
+		if MonetizationServer.OnForceSpawnOmegaBoss then
+			MonetizationServer.OnForceSpawnOmegaBoss(player)
+		end
+		if MonetizationServer.OnServerAnnouncement then
+			MonetizationServer.OnServerAnnouncement(
+				string.format("🔥 %s summoned the OMEGA MECH OVERLORD in the Arena!", player.DisplayName),
+				Color3.fromRGB(255, 85, 65)
+			)
+		end
+	elseif key == "GemPackSmall" then
+		profile.Gems += 1500
+	elseif key == "GemPackMedium" then
+		profile.Gems += 6000
+	elseif key == "GemPackMega" then
+		profile.Gems += 25000
+		profile.HeavenlyPotions += 3
+	else
+		return false
+	end
+
+	DataManager.MarkDirty(player)
+	if MonetizationServer.OnProfileUpdated then
+		MonetizationServer.OnProfileUpdated(player)
+	end
+	return true
+end
+
+function MonetizationServer.GrantGamepassByKey(player: Player, key: string): boolean
+	local profile = DataManager.GetProfile(player)
+	if not profile then
+		return false
+	end
+	local gp = GameConfig.GetGamepassByKey(key)
+	if not gp then
+		return false
+	end
+
+	profile.OwnedGamepasses[key] = true
+	if key == "VIP" then
+		profile.Coins += 2500
+		profile.Gems += 300
+	end
+
+	DataManager.MarkDirty(player)
+	if MonetizationServer.OnProfileUpdated then
+		MonetizationServer.OnProfileUpdated(player)
+	end
+	if MonetizationServer.OnServerAnnouncement then
+		MonetizationServer.OnServerAnnouncement(
+			string.format("👑 %s unlocked the [%s] Gamepass!", player.DisplayName, gp.Name),
+			gp.AccentColor
+		)
+	end
+	return true
+end
+
+function MonetizationServer.PromptOrSimulatePurchase(player: Player, kind: string, key: string): (boolean, string)
+	local isStudio = RunService:IsStudio()
+
+	if kind == "Gamepass" then
+		local gp = GameConfig.GetGamepassByKey(key)
+		if not gp then
+			return false, "Unknown Gamepass"
+		end
+		if MonetizationServer.OwnsGamepass(player, key) then
+			return false, "You already own " .. gp.Name .. "!"
+		end
+
+		if isStudio and GameConfig.STUDIO_SANDBOX_PURCHASES then
+			MonetizationServer.GrantGamepassByKey(player, key)
+			return true, "[Studio Sandbox] Unlocked " .. gp.Name .. "!"
+		end
+
+		pcall(function()
+			MarketplaceService:PromptGamePassPurchase(player, gp.Id)
+		end)
+		return true, "Prompted " .. gp.Name
+	elseif kind == "DevProduct" then
+		local dp = GameConfig.GetDevProductByKey(key)
+		if not dp then
+			return false, "Unknown Product"
+		end
+
+		if isStudio and GameConfig.STUDIO_SANDBOX_PURCHASES then
+			MonetizationServer.GrantDevProductByKey(player, key)
+			return true, "[Studio Sandbox] Activated " .. dp.Name .. "!"
+		end
+
+		pcall(function()
+			MarketplaceService:PromptProductPurchase(player, dp.Id)
+		end)
+		return true, "Prompted " .. dp.Name
+	end
+
+	return false, "Invalid purchase request"
+end
+
+function MonetizationServer.Init()
+	-- Live Gamepass purchase listener
+	MarketplaceService.PromptGamePassPurchaseFinished:Connect(function(player, gamePassId, wasPurchased)
+		if not wasPurchased then
+			return
+		end
+		local gp = GameConfig.GetGamepassById(gamePassId)
+		if gp then
+			MonetizationServer.GrantGamepassByKey(player, gp.Key)
+		end
+	end)
+
+	-- Idempotent ProcessReceipt handler for all Developer Products
+	MarketplaceService.ProcessReceipt = function(receiptInfo): Enum.ProductPurchaseDecision
+		local player = Players:GetPlayerByUserId(receiptInfo.PlayerId)
+		if not player then
+			return Enum.ProductPurchaseDecision.NotProcessedYet
+		end
+
+		local profile = DataManager.GetProfile(player)
+		if not profile then
+			return Enum.ProductPurchaseDecision.NotProcessedYet
+		end
+
+		local purchaseId = tostring(receiptInfo.PurchaseId)
+		if DataManager.HasProcessedReceipt(profile, purchaseId) then
+			return Enum.ProductPurchaseDecision.PurchaseGranted
+		end
+
+		local dp = GameConfig.GetDevProductById(receiptInfo.ProductId)
+		if not dp then
+			warn("[MonetizationServer] Unrecognized ProductId:", receiptInfo.ProductId)
+			return Enum.ProductPurchaseDecision.NotProcessedYet
+		end
+
+		local granted = MonetizationServer.GrantDevProductByKey(player, dp.Key)
+		if not granted then
+			return Enum.ProductPurchaseDecision.NotProcessedYet
+		end
+
+		DataManager.RecordReceipt(profile, purchaseId)
+		DataManager.SaveProfile(player, true)
+		return Enum.ProductPurchaseDecision.PurchaseGranted
+	end
+end
+
+return MonetizationServer
+]]></ProtectedString>
+				</Properties>
+			</Item>
+			<Item class="ModuleScript" referent="RBX_MOD_VISUALAURA">
+				<Properties>
+					<string name="Name">VisualAuraBuilder</string>
+					<ProtectedString name="Source"><![CDATA[--!strict
+--[[
+	VisualAuraBuilder.luau
+	Procedural 3D Cyber Blade, Orbiting Aura Shards, Particle Rings, and
+	Overhead Title BillboardGui generator for AURA BLADE: RNG & BOSS ARENA.
+]]
+
+local RunService = game:GetService("RunService")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+
+local GameConfig = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("GameConfig"))
+
+local VisualAuraBuilder = {}
+
+type ActiveRigAura = {
+	Folder: Folder,
+	Orbs: { BasePart },
+	PrimaryColor: Color3,
+	OrbitRadius: number,
+	OrbitSpeed: number,
+}
+
+local activeAuras: { [Model]: ActiveRigAura } = {}
+
+local function formatCommaNumber(n: number): string
+	local s = tostring(math.floor(n))
+	return (s:reverse():gsub("(%d%d%d)", "%1,"):reverse():gsub("^,", ""))
+end
+
+function VisualAuraBuilder.ClearCharacterVisuals(character: Model)
+	activeAuras[character] = nil
+	local existing = character:FindFirstChild("AuraBladeVisuals")
+	if existing then
+		existing:Destroy()
+	end
+	local head = character:FindFirstChild("Head")
+	if head then
+		local tag = head:FindFirstChild("AuraTitleBillboard")
+		if tag then
+			tag:Destroy()
+		end
+	end
+end
+
+function VisualAuraBuilder.ApplyAuraToCharacter(
+	player: Player,
+	auraId: string,
+	rebirths: number,
+	isVIP: boolean
+)
+	local character = player.Character
+	if not character then
+		return
+	end
+	local rootPart = character:FindFirstChild("HumanoidRootPart") :: BasePart?
+	local head = character:FindFirstChild("Head") :: BasePart?
+	local humanoid = character:FindFirstChildOfClass("Humanoid")
+	if not rootPart or not head or not humanoid then
+		return
+	end
+
+	VisualAuraBuilder.ClearCharacterVisuals(character)
+	local aura = GameConfig.GetAuraById(auraId)
+
+	-- Apply movement speed bonus from equipped Aura
+	humanoid.WalkSpeed = 18 + aura.SpeedBonus
+
+	local visualsFolder = Instance.new("Folder")
+	visualsFolder.Name = "AuraBladeVisuals"
+	visualsFolder.Parent = character
+
+	-- 1. Core PointLight & Particle Emitter on HumanoidRootPart
+	local light = Instance.new("PointLight")
+	light.Name = "AuraGlow"
+	light.Color = aura.PrimaryColor
+	light.Brightness = 2.5 + math.min(4, math.log10(math.max(2, aura.OneIn)))
+	light.Range = 14 + math.min(18, aura.OrbitOrbs * 1.5)
+	light.Parent = rootPart
+
+	local particles = Instance.new("ParticleEmitter")
+	particles.Name = "AuraSparks"
+	particles.Color = ColorSequence.new(aura.PrimaryColor, aura.SecondaryColor)
+	particles.LightEmission = 1
+	particles.Size = NumberSequence.new({
+		NumberSequenceKeypoint.new(0, 0.45),
+		NumberSequenceKeypoint.new(0.6, 0.85),
+		NumberSequenceKeypoint.new(1, 0),
+	})
+	particles.Transparency = NumberSequence.new({
+		NumberSequenceKeypoint.new(0, 0.1),
+		NumberSequenceKeypoint.new(1, 1),
+	})
+	particles.Lifetime = NumberRange.new(0.7, 1.35)
+	particles.Rate = 18 + (aura.OrbitOrbs * 6)
+	particles.Speed = NumberRange.new(3, 8)
+	particles.SpreadAngle = Vector2.new(180, 180)
+	particles.Parent = rootPart
+
+	-- 2. Procedural 3D Cyber Katana welded to RightHand / Right Arm
+	local hand = (character:FindFirstChild("RightHand") or character:FindFirstChild("Right Arm") or rootPart) :: BasePart
+	local bladeModel = Instance.new("Model")
+	bladeModel.Name = "CyberKatana"
+	bladeModel.Parent = visualsFolder
+
+	local hilt = Instance.new("Part")
+	hilt.Name = "Hilt"
+	hilt.Size = Vector3.new(0.32, 0.32, 1.35)
+	hilt.Material = Enum.Material.Metal
+	hilt.Color = Color3.fromRGB(28, 32, 42)
+	hilt.CanCollide = false
+	hilt.Massless = true
+	hilt.CFrame = hand.CFrame * CFrame.new(0, -0.4, -0.5)
+	hilt.Parent = bladeModel
+
+	local handWeld = Instance.new("WeldConstraint")
+	handWeld.Part0 = hand
+	handWeld.Part1 = hilt
+	handWeld.Parent = hilt
+
+	local bladeEdge = Instance.new("Part")
+	bladeEdge.Name = "NeonEdge"
+	bladeEdge.Size = Vector3.new(0.14, 0.36, 4.1)
+	bladeEdge.Material = Enum.Material.Neon
+	bladeEdge.Color = aura.PrimaryColor
+	bladeEdge.CanCollide = false
+	bladeEdge.Massless = true
+	bladeEdge.CFrame = hilt.CFrame * CFrame.new(0, 0, -2.65)
+	bladeEdge.Parent = bladeModel
+
+	local bladeWeld = Instance.new("WeldConstraint")
+	bladeWeld.Part0 = hilt
+	bladeWeld.Part1 = bladeEdge
+	bladeWeld.Parent = bladeEdge
+
+	-- Slash Trail on the Neon Edge
+	local att0 = Instance.new("Attachment")
+	att0.Position = Vector3.new(0, 0.18, -2.0)
+	att0.Parent = bladeEdge
+
+	local att1 = Instance.new("Attachment")
+	att1.Position = Vector3.new(0, -0.18, 2.0)
+	att1.Parent = bladeEdge
+
+	local trail = Instance.new("Trail")
+	trail.Attachment0 = att0
+	trail.Attachment1 = att1
+	trail.Color = ColorSequence.new(aura.PrimaryColor, aura.SecondaryColor)
+	trail.LightEmission = 1
+	trail.Lifetime = 0.28
+	trail.Transparency = NumberSequence.new(0.15, 1.0)
+	trail.Parent = bladeEdge
+
+	-- 3. Orbiting 3D Neon Shards around the player
+	local orbs: { BasePart } = {}
+	for i = 1, aura.OrbitOrbs do
+		local orb = Instance.new("Part")
+		orb.Name = "AuraOrb_" .. tostring(i)
+		orb.Size = Vector3.new(0.65, 1.25, 0.65)
+		orb.Material = Enum.Material.Neon
+		orb.Color = if i % 2 == 0 then aura.SecondaryColor else aura.PrimaryColor
+		orb.Anchored = true
+		orb.CanCollide = false
+		orb.CanQuery = false
+		orb.CanTouch = false
+		orb.CFrame = rootPart.CFrame
+		orb.Parent = visualsFolder
+		table.insert(orbs, orb)
+	end
+
+	activeAuras[character] = {
+		Folder = visualsFolder,
+		Orbs = orbs,
+		PrimaryColor = aura.PrimaryColor,
+		OrbitRadius = 4.2 + math.min(3.5, aura.OrbitOrbs * 0.25),
+		OrbitSpeed = 2.0 + math.min(3.0, aura.OrbitOrbs * 0.2),
+	}
+
+	-- 4. Overhead Title & Odds BillboardGui
+	local bb = Instance.new("BillboardGui")
+	bb.Name = "AuraTitleBillboard"
+	bb.Adornee = head
+	bb.Size = UDim2.new(0, 240, 0, 72)
+	bb.StudsOffset = Vector3.new(0, 3.1, 0)
+	bb.AlwaysOnTop = true
+	bb.MaxDistance = 120
+	bb.Parent = head
+
+	local topLine = Instance.new("TextLabel")
+	topLine.BackgroundTransparency = 1
+	topLine.Size = UDim2.new(1, 0, 0.36, 0)
+	topLine.Font = Enum.Font.GothamBold
+	local vipPrefix = if isVIP then "👑 [VIP] " else ""
+	local rebInfo = GameConfig.GetRebirthTier(rebirths)
+	local rebTag = if rebInfo then string.format("[%s] ", rebInfo.Title) else ""
+	topLine.Text = vipPrefix .. rebTag .. player.DisplayName
+	topLine.TextColor3 = if isVIP then Color3.fromRGB(255, 220, 65) else Color3.fromRGB(235, 240, 255)
+	topLine.TextScaled = true
+	topLine.TextStrokeTransparency = 0.25
+	topLine.Parent = bb
+
+	local auraLine = Instance.new("TextLabel")
+	auraLine.BackgroundTransparency = 1
+	auraLine.Position = UDim2.new(0, 0, 0.36, 0)
+	auraLine.Size = UDim2.new(1, 0, 0.64, 0)
+	auraLine.Font = Enum.Font.GothamBlack
+	auraLine.Text = string.format("★ %s [1 in %s] ★", string.upper(aura.Name), formatCommaNumber(aura.OneIn))
+	auraLine.TextColor3 = aura.PrimaryColor
+	auraLine.TextScaled = true
+	auraLine.TextStrokeTransparency = 0.15
+	auraLine.Parent = bb
+end
+
+function VisualAuraBuilder.StartOrbitLoop()
+	RunService.Heartbeat:Connect(function()
+		local t = os.clock()
+		for character, data in pairs(activeAuras) do
+			local root = character:FindFirstChild("HumanoidRootPart") :: BasePart?
+			if not character.Parent or not root then
+				activeAuras[character] = nil
+				continue
+			end
+
+			local count = #data.Orbs
+			for i, orb in ipairs(data.Orbs) do
+				if orb.Parent then
+					local angle = (t * data.OrbitSpeed) + ((i - 1) * (math.pi * 2 / count))
+					local bob = math.sin((t * 3.2) + i) * 0.85
+					local offset = Vector3.new(
+						math.cos(angle) * data.OrbitRadius,
+						bob,
+						math.sin(angle) * data.OrbitRadius
+					)
+					local targetPos = root.Position + offset
+					orb.CFrame = CFrame.lookAt(targetPos, root.Position) * CFrame.Angles(t * 2, 0, 0)
+				end
+			end
+		end
+	end)
+end
+
+return VisualAuraBuilder
+]]></ProtectedString>
+				</Properties>
+			</Item>
+			<Item class="ModuleScript" referent="RBX_MOD_WORLDBUILDER">
+				<Properties>
+					<string name="Name">WorldBuilder</string>
+					<ProtectedString name="Source"><![CDATA[--!strict
+--[[
+	WorldBuilder.luau
+	Procedural 3D Neon Cyber Arena, Sky Obby Course, VIP Lounge,
+	Mythic Showcase Pedestals, and Physical Leaderboard builder.
+	Generates the entire playable world automatically on Server boot!
+]]
+
+local Workspace = game:GetService("Workspace")
+local Lighting = game:GetService("Lighting")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+
+local GameConfig = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("GameConfig"))
+
+local WorldBuilder = {}
+
+local function createPart(props: { [string]: any }): Part
+	local p = Instance.new("Part")
+	p.Anchored = true
+	p.TopSurface = Enum.SurfaceType.Smooth
+	p.BottomSurface = Enum.SurfaceType.Smooth
+	for k, v in pairs(props) do
+		(p :: any)[k] = v
+	end
+	return p
+end
+
+local function attachBillboardSign(parent: BasePart, title: string, subtitle: string, accentColor: Color3)
+	local bb = Instance.new("BillboardGui")
+	bb.Size = UDim2.new(0, 260, 0, 80)
+	bb.StudsOffset = Vector3.new(0, 4.5, 0)
+	bb.AlwaysOnTop = true
+	bb.MaxDistance = 150
+	bb.Parent = parent
+
+	local lbl1 = Instance.new("TextLabel")
+	lbl1.BackgroundTransparency = 1
+	lbl1.Size = UDim2.new(1, 0, 0.55, 0)
+	lbl1.Font = Enum.Font.GothamBlack
+	lbl1.Text = title
+	lbl1.TextColor3 = accentColor
+	lbl1.TextScaled = true
+	lbl1.TextStrokeTransparency = 0.2
+	lbl1.Parent = bb
+
+	local lbl2 = Instance.new("TextLabel")
+	lbl2.BackgroundTransparency = 1
+	lbl2.Position = UDim2.new(0, 0, 0.55, 0)
+	lbl2.Size = UDim2.new(1, 0, 0.45, 0)
+	lbl2.Font = Enum.Font.GothamBold
+	lbl2.Text = subtitle
+	lbl2.TextColor3 = Color3.fromRGB(235, 240, 255)
+	lbl2.TextScaled = true
+	lbl2.TextStrokeTransparency = 0.3
+	lbl2.Parent = bb
+end
+
+function WorldBuilder.ConfigureLighting()
+	Lighting.Ambient = Color3.fromRGB(22, 26, 42)
+	Lighting.OutdoorAmbient = Color3.fromRGB(32, 38, 64)
+	Lighting.Brightness = 2.2
+	Lighting.ClockTime = 0
+	Lighting.FogEnd = 1200
+	Lighting.FogColor = Color3.fromRGB(10, 12, 24)
+
+	if not Lighting:FindFirstChildOfClass("BloomEffect") then
+		local bloom = Instance.new("BloomEffect")
+		bloom.Intensity = 0.65
+		bloom.Size = 24
+		bloom.Threshold = 0.85
+		bloom.Parent = Lighting
+	end
+end
+
+function WorldBuilder.BuildWorld(
+	onObbyPadTouched: (Player) -> (),
+	onVipFountainTouched: (Player) -> (),
+	onQuickShopPedestalTouched: (Player, string, string) -> ()
+): Folder
+	WorldBuilder.ConfigureLighting()
+
+	local existing = Workspace:FindFirstChild("AuraBladeWorld")
+	if existing then
+		existing:Destroy()
+	end
+
+	-- Remove default Baseplate if present so our custom Cyber Plaza shines
+	local defaultBaseplate = Workspace:FindFirstChild("Baseplate")
+	if defaultBaseplate then
+		defaultBaseplate:Destroy()
+	end
+
+	local world = Instance.new("Folder")
+	world.Name = "AuraBladeWorld"
+	world.Parent = Workspace
+
+	-- 1. CENTRAL CYBER PLAZA FLOOR
+	createPart({
+		Name = "CyberPlazaFloor",
+		Size = Vector3.new(280, 4, 280),
+		Position = Vector3.new(0, -2, 0),
+		Color = Color3.fromRGB(18, 22, 34),
+		Material = Enum.Material.Concrete,
+		Parent = world,
+	})
+
+	-- Glowing Neon Grid Lines on the Plaza
+	for offset = -120, 120, 30 do
+		createPart({
+			Name = "NeonGridX_" .. tostring(offset),
+			Size = Vector3.new(260, 0.15, 0.65),
+			Position = Vector3.new(0, 0.05, offset),
+			Color = Color3.fromRGB(0, 180, 255),
+			Material = Enum.Material.Neon,
+			CanCollide = false,
+			Parent = world,
+		})
+		createPart({
+			Name = "NeonGridZ_" .. tostring(offset),
+			Size = Vector3.new(0.65, 0.15, 260),
+			Position = Vector3.new(offset, 0.05, 0),
+			Color = Color3.fromRGB(0, 180, 255),
+			Material = Enum.Material.Neon,
+			CanCollide = false,
+			Parent = world,
+		})
+	end
+
+	-- 2. SPAWN LOCATION (South Plaza)
+	local spawnLoc = Instance.new("SpawnLocation")
+	spawnLoc.Name = "CyberSpawn"
+	spawnLoc.Anchored = true
+	spawnLoc.Size = Vector3.new(18, 1.2, 18)
+	spawnLoc.Position = Vector3.new(0, 0.6, 70)
+	spawnLoc.Color = Color3.fromRGB(0, 225, 255)
+	spawnLoc.Material = Enum.Material.Neon
+	spawnLoc.Neutral = true
+	spawnLoc.TopSurface = Enum.SurfaceType.Smooth
+	spawnLoc.Parent = world
+
+	attachBillboardSign(
+		spawnLoc,
+		"⚔️ AURA BLADE: RNG & BOSS ARENA ⚔️",
+		"Roll Mythic Auras • Slash Arena Bosses • Conquer the 2x Luck Sky Obby!",
+		Color3.fromRGB(0, 235, 255)
+	)
+
+	-- 3. CENTER BOSS COLOSSEUM ARENA (Origin 0, 0, -10)
+	local arenaFloor = createPart({
+		Name = "BossColosseumFloor",
+		Size = Vector3.new(76, 1.5, 76),
+		Position = Vector3.new(0, 0.75, -10),
+		Color = Color3.fromRGB(28, 18, 42),
+		Material = Enum.Material.Granite,
+		Parent = world,
+	})
+
+	createPart({
+		Name = "BossSpawnAltar",
+		Size = Vector3.new(14, 1.2, 14),
+		Position = Vector3.new(0, 1.8, -10),
+		Color = Color3.fromRGB(255, 55, 95),
+		Material = Enum.Material.Neon,
+		Parent = world,
+	})
+
+	attachBillboardSign(
+		arenaFloor,
+		"🔥 BOSS COLOSSEUM ARENA 🔥",
+		"Click or Press [F] to Slash Bosses for Massive Flux Coins, Gems & Free Fast Rolls!",
+		Color3.fromRGB(255, 75, 95)
+	)
+
+	-- 4. PHYSICAL ROBUX & BOOSTER PEDESTALS (High-visibility 3D impulse conversion pads)
+	local shopPads = {
+		{
+			Pos = Vector3.new(-32, 1.2, 52),
+			Kind = "Gamepass",
+			Key = "DoubleLuck",
+			Title = "🍀 2X LUCK FOREVER",
+			Sub = "Step to Unlock Permanent 2x Roll Luck!",
+			Color = Color3.fromRGB(45, 255, 130),
+		},
+		{
+			Pos = Vector3.new(-16, 1.2, 52),
+			Kind = "Gamepass",
+			Key = "TripleRoll",
+			Title = "⚡ 3X TRIPLE ROLL",
+			Sub = "Roll 3 Auras At Once!",
+			Color = Color3.fromRGB(255, 185, 35),
+		},
+		{
+			Pos = Vector3.new(16, 1.2, 52),
+			Kind = "Gamepass",
+			Key = "VIP",
+			Title = "👑 VIP CYBER SOVEREIGN",
+			Sub = "+50% Coins, +25% Luck & Crown!",
+			Color = Color3.fromRGB(255, 220, 55),
+		},
+		{
+			Pos = Vector3.new(32, 1.2, 52),
+			Kind = "DevProduct",
+			Key = "ServerLuckBoost",
+			Title = "🎉 2X SERVER LUCK PARTY",
+			Sub = "Boost the Entire Server for 15m!",
+			Color = Color3.fromRGB(185, 85, 255),
+		},
+	}
+
+	local padDebounce: { [Player]: number } = {}
+	for _, info in ipairs(shopPads) do
+		local pad = createPart({
+			Name = "ShopPad_" .. info.Key,
+			Size = Vector3.new(8, 1.4, 8),
+			Position = info.Pos,
+			Color = info.Color,
+			Material = Enum.Material.Neon,
+			Parent = world,
+		})
+		attachBillboardSign(pad, info.Title, info.Sub, info.Color)
+
+		pad.Touched:Connect(function(hit)
+			local char = hit.Parent
+			local player = if char then game:GetService("Players"):GetPlayerFromCharacter(char) else nil
+			if player then
+				local now = os.clock()
+				if (padDebounce[player] or 0) + 3.0 < now then
+					padDebounce[player] = now
+					onQuickShopPedestalTouched(player, info.Kind, info.Key)
+				end
+			end
+		end)
+	end
+
+	-- 5. VIP CYBER LOUNGE (+35% LUCK FOUNTAIN) - West Plaza
+	local vipBase = createPart({
+		Name = "VipLoungePlatform",
+		Size = Vector3.new(36, 2, 36),
+		Position = Vector3.new(-82, 1, 0),
+		Color = Color3.fromRGB(48, 40, 18),
+		Material = Enum.Material.Marble,
+		Parent = world,
+	})
+
+	local vipFountain = createPart({
+		Name = "VipLuckFountain",
+		Shape = Enum.PartType.Cylinder,
+		Size = Vector3.new(4, 12, 12),
+		CFrame = CFrame.new(-82, 3.5, 0) * CFrame.Angles(0, 0, math.rad(90)),
+		Color = Color3.fromRGB(255, 215, 50),
+		Material = Enum.Material.Neon,
+		Parent = world,
+	})
+	attachBillboardSign(
+		vipFountain,
+		"👑 VIP & REBIRTH 3+ SANCTUM 👑",
+		"Touch for +35% Bonus Aura Roll Luck!",
+		Color3.fromRGB(255, 215, 50)
+	)
+	local _ = vipBase
+
+	local vipDebounce: { [Player]: number } = {}
+	vipFountain.Touched:Connect(function(hit)
+		local char = hit.Parent
+		local player = if char then game:GetService("Players"):GetPlayerFromCharacter(char) else nil
+		if player then
+			local now = os.clock()
+			if (vipDebounce[player] or 0) + 2.0 < now then
+				vipDebounce[player] = now
+				onVipFountainTouched(player)
+			end
+		end
+	end)
+
+	-- 6. NEON SKY OBBY COURSE (East Plaza -> Ascends to +100% 2X LUCK SUMMIT PAD)
+	local obbyFolder = Instance.new("Folder")
+	obbyFolder.Name = "NeonSkyObby"
+	obbyFolder.Parent = world
+
+	local startSign = createPart({
+		Name = "ObbyStartPad",
+		Size = Vector3.new(12, 1.5, 12),
+		Position = Vector3.new(62, 1, 45),
+		Color = Color3.fromRGB(0, 255, 155),
+		Material = Enum.Material.Neon,
+		Parent = obbyFolder,
+	})
+	attachBillboardSign(
+		startSign,
+		"🏃 NEON SKY OBBY START 🏃",
+		"Reach the Summit for 5 Minutes of +100% (2X) ROLL LUCK + 500 Bonus Coins!",
+		Color3.fromRGB(0, 255, 155)
+	)
+
+	local numStages = 12
+	for i = 1, numStages do
+		local zPos = 45 - (i * 10)
+		local xOffset = math.sin(i * 0.9) * 8
+		local yPos = 1 + (i * 3.2)
+		createPart({
+			Name = "ObbyStep_" .. tostring(i),
+			Size = Vector3.new(7, 1.2, 5.5),
+			Position = Vector3.new(68 + xOffset, yPos, zPos),
+			Color = Color3.fromHSV((i / numStages) * 0.75, 0.85, 1.0),
+			Material = Enum.Material.Neon,
+			Parent = obbyFolder,
+		})
+	end
+
+	local summitPad = createPart({
+		Name = "ObbySummitPad",
+		Size = Vector3.new(16, 2, 16),
+		Position = Vector3.new(68, 1 + ((numStages + 1) * 3.2), 45 - ((numStages + 1) * 10)),
+		Color = Color3.fromRGB(50, 255, 130),
+		Material = Enum.Material.Neon,
+		Parent = obbyFolder,
+	})
+	attachBillboardSign(
+		summitPad,
+		"🏆 SKY OBBY SUMMIT: +100% LUCK! 🏆",
+		"Step Here to Claim +100% Roll Luck (5m) + 500 Flux Coins & Return to Plaza!",
+		Color3.fromRGB(50, 255, 130)
+	)
+
+	local obbyDebounce: { [Player]: number } = {}
+	summitPad.Touched:Connect(function(hit)
+		local char = hit.Parent
+		local player = if char then game:GetService("Players"):GetPlayerFromCharacter(char) else nil
+		if player then
+			local now = os.clock()
+			if (obbyDebounce[player] or 0) + 4.0 < now then
+				obbyDebounce[player] = now
+				onObbyPadTouched(player)
+				local root = char:FindFirstChild("HumanoidRootPart") :: BasePart?
+				if root then
+					root.CFrame = spawnLoc.CFrame + Vector3.new(0, 4, 0)
+				end
+			end
+		end
+	end)
+
+	-- 7. MYTHIC & CELESTIAL AURA SHOWCASE MONOLITHS (North Plaza)
+	local showcaseIndices = { 10, 12, 13, 16 }
+	for idx, auraIndex in ipairs(showcaseIndices) do
+		local aura = GameConfig.Auras[auraIndex]
+		if aura then
+			local xPos = -45 + ((idx - 1) * 30)
+			local pedestal = createPart({
+				Name = "Showcase_" .. aura.Id,
+				Size = Vector3.new(8, 10, 4),
+				Position = Vector3.new(xPos, 5, -78),
+				Color = aura.PrimaryColor,
+				Material = Enum.Material.Neon,
+				Parent = world,
+			})
+			attachBillboardSign(
+				pedestal,
+				string.format("★ %s ★", aura.Name),
+				string.format("[%s • 1 in %d] +%d DMG | %gx Coins", aura.Tier, aura.OneIn, aura.BaseDamage, aura.CoinMultiplier),
+				aura.PrimaryColor
+			)
+		end
+	end
+
+	return world
+end
+
+return WorldBuilder
+]]></ProtectedString>
+				</Properties>
+			</Item>
+			<Item class="ModuleScript" referent="RBX_MOD_COMBATBOSS">
+				<Properties>
+					<string name="Name">CombatAndBossServer</string>
+					<ProtectedString name="Source"><![CDATA[--!strict
+--[[
+	CombatAndBossServer.luau
+	Active Boss Wave Spawner, Procedural 3D Cyber Boss Rig, AoE Telegraph AI,
+	Server-Validated Sword Slash & Dash Combat, and Damage-Share Loot Payouts.
+]]
+
+local Players = game:GetService("Players")
+local Workspace = game:GetService("Workspace")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+
+local GameConfig = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("GameConfig"))
+local DataManager = require(script.Parent.DataManager)
+local MonetizationServer = require(script.Parent.MonetizationServer)
+
+local CombatAndBossServer = {}
+
+export type ActiveBossState = {
+	Def: GameConfig.BossDefinition,
+	Model: Model,
+	CorePart: Part,
+	CurrentHP: number,
+	MaxHP: number,
+	DamageContributors: { [Player]: number },
+	BonusLootMultiplier: number,
+}
+
+CombatAndBossServer.CurrentBoss = nil :: ActiveBossState?
+CombatAndBossServer.BossCounter = 0
+CombatAndBossServer.OnBossStateChanged = nil :: ((string, number, number, Color3) -> ())?
+CombatAndBossServer.OnBossDefeated = nil :: ((Player, string, number, number, number) -> ())?
+
+local slashCooldowns: { [Player]: number } = {}
+local ARENA_CENTER = Vector3.new(0, 6.5, -10)
+local SLASH_RANGE = 26
+
+local function updateBossBillboard(boss: ActiveBossState)
+	local bb = boss.CorePart:FindFirstChild("BossBillboard") :: BillboardGui?
+	if not bb then
+		return
+	end
+	local hpLabel = bb:FindFirstChild("HPLabel") :: TextLabel?
+	local fill = bb:FindFirstChild("BarBg") and (bb.BarBg :: Frame):FindFirstChild("Fill") :: Frame?
+	if hpLabel then
+		hpLabel.Text = string.format("%s — %d / %d HP", boss.Def.Name, math.max(0, math.floor(boss.CurrentHP)), boss.MaxHP)
+	end
+	if fill then
+		local ratio = math.clamp(boss.CurrentHP / boss.MaxHP, 0, 1)
+		fill.Size = UDim2.new(ratio, 0, 1, 0)
+	end
+end
+
+function CombatAndBossServer.SpawnBoss(def: GameConfig.BossDefinition, bonusMultiplier: number?)
+	if CombatAndBossServer.CurrentBoss and CombatAndBossServer.CurrentBoss.Model.Parent then
+		CombatAndBossServer.CurrentBoss.Model:Destroy()
+	end
+
+	local mult = bonusMultiplier or 1.0
+	local model = Instance.new("Model")
+	model.Name = "ArenaBoss_" .. def.Id
+
+	local scale = def.Scale
+	local core = Instance.new("Part")
+	core.Name = "BossCore"
+	core.Anchored = true
+	core.Size = Vector3.new(6.5 * scale, 9.0 * scale, 4.5 * scale)
+	core.Position = ARENA_CENTER + Vector3.new(0, 2.5 * scale, 0)
+	core.Color = Color3.fromRGB(26, 30, 44)
+	core.Material = Enum.Material.Metal
+	core.Parent = model
+
+	local chestNeon = Instance.new("Part")
+	chestNeon.Name = "ReactorCore"
+	chestNeon.Shape = Enum.PartType.Ball
+	chestNeon.Anchored = true
+	chestNeon.CanCollide = false
+	chestNeon.Size = Vector3.new(3.6 * scale, 3.6 * scale, 3.6 * scale)
+	chestNeon.Position = core.Position + Vector3.new(0, 0.8 * scale, 0)
+	chestNeon.Color = def.PrimaryColor
+	chestNeon.Material = Enum.Material.Neon
+	chestNeon.Parent = model
+
+	local ring = Instance.new("Part")
+	ring.Name = "EnergyHalo"
+	ring.Anchored = true
+	ring.CanCollide = false
+	ring.Size = Vector3.new(10 * scale, 0.5 * scale, 10 * scale)
+	ring.Position = core.Position + Vector3.new(0, 5.2 * scale, 0)
+	ring.Color = def.PrimaryColor
+	ring.Material = Enum.Material.Neon
+	ring.Parent = model
+
+	-- Boss Overhead HP Bar
+	local bb = Instance.new("BillboardGui")
+	bb.Name = "BossBillboard"
+	bb.Size = UDim2.new(0, 320, 0, 76)
+	bb.StudsOffset = Vector3.new(0, 7.5 * scale, 0)
+	bb.AlwaysOnTop = true
+	bb.MaxDistance = 200
+	bb.Parent = core
+
+	local hpLabel = Instance.new("TextLabel")
+	hpLabel.Name = "HPLabel"
+	hpLabel.BackgroundTransparency = 1
+	hpLabel.Size = UDim2.new(1, 0, 0.55, 0)
+	hpLabel.Font = Enum.Font.GothamBlack
+	hpLabel.TextColor3 = def.PrimaryColor
+	hpLabel.TextScaled = true
+	hpLabel.TextStrokeTransparency = 0.15
+	hpLabel.Parent = bb
+
+	local barBg = Instance.new("Frame")
+	barBg.Name = "BarBg"
+	barBg.Position = UDim2.new(0.05, 0, 0.62, 0)
+	barBg.Size = UDim2.new(0.9, 0, 0.28, 0)
+	barBg.BackgroundColor3 = Color3.fromRGB(20, 24, 34)
+	barBg.BorderSizePixel = 0
+	barBg.Parent = bb
+
+	local fill = Instance.new("Frame")
+	fill.Name = "Fill"
+	fill.Size = UDim2.new(1, 0, 1, 0)
+	fill.BackgroundColor3 = def.PrimaryColor
+	fill.BorderSizePixel = 0
+	fill.Parent = barBg
+
+	model.PrimaryPart = core
+	model.Parent = Workspace
+
+	local state: ActiveBossState = {
+		Def = def,
+		Model = model,
+		CorePart = core,
+		CurrentHP = def.MaxHP,
+		MaxHP = def.MaxHP,
+		DamageContributors = {},
+		BonusLootMultiplier = mult,
+	}
+	CombatAndBossServer.CurrentBoss = state
+	updateBossBillboard(state)
+
+	if CombatAndBossServer.OnBossStateChanged then
+		CombatAndBossServer.OnBossStateChanged(def.Name, state.CurrentHP, state.MaxHP, def.PrimaryColor)
+	end
+end
+
+function CombatAndBossServer.HandlePlayerSlash(player: Player): (boolean, number, boolean)
+	local now = os.clock()
+	if (slashCooldowns[player] or 0) + 0.32 > now then
+		return false, 0, false
+	end
+	slashCooldowns[player] = now
+
+	local profile = DataManager.GetProfile(player)
+	if not profile then
+		return false, 0, false
+	end
+
+	local char = player.Character
+	local root = if char then char:FindFirstChild("HumanoidRootPart") :: BasePart? else nil
+	if not root then
+		return false, 0, false
+	end
+
+	local boss = CombatAndBossServer.CurrentBoss
+	if not boss or boss.CurrentHP <= 0 or not boss.CorePart.Parent then
+		return false, 0, false
+	end
+
+	local dist = (root.Position - boss.CorePart.Position).Magnitude
+	if dist > SLASH_RANGE then
+		return false, 0, false
+	end
+
+	local aura = GameConfig.GetAuraById(profile.EquippedAuraId)
+	local isCrit = math.random() < 0.22
+	local dmg = math.floor(aura.BaseDamage * (if isCrit then 1.75 else 1.0))
+
+	-- Small instant coin reward on every hit so combat feels super rewarding
+	local hitCoins = math.max(1, math.floor(2 * aura.CoinMultiplier))
+	profile.Coins += hitCoins
+	profile.TotalDamageDealt += dmg
+
+	boss.CurrentHP = math.max(0, boss.CurrentHP - dmg)
+	boss.DamageContributors[player] = (boss.DamageContributors[player] or 0) + dmg
+	updateBossBillboard(boss)
+
+	if CombatAndBossServer.OnBossStateChanged then
+		CombatAndBossServer.OnBossStateChanged(boss.Def.Name, boss.CurrentHP, boss.MaxHP, boss.Def.PrimaryColor)
+	end
+
+	if boss.CurrentHP <= 0 then
+		CombatAndBossServer.ResolveBossDefeat(boss)
+	else
+		DataManager.MarkDirty(player)
+	end
+
+	return true, dmg, isCrit
+end
+
+function CombatAndBossServer.ResolveBossDefeat(boss: ActiveBossState)
+	CombatAndBossServer.CurrentBoss = nil
+	if boss.Model.Parent then
+		boss.Model:Destroy()
+	end
+
+	for contributor, dmgDealt in pairs(boss.DamageContributors) do
+		if contributor.Parent and dmgDealt > 0 then
+			local profile = DataManager.GetProfile(contributor)
+			if profile then
+				local aura = GameConfig.GetAuraById(profile.EquippedAuraId)
+				local rebInfo = GameConfig.GetRebirthTier(profile.Rebirths)
+				local rebCoinMult = if rebInfo then rebInfo.PermanentCoinMultiplier else 1.0
+				local vipMult = if MonetizationServer.OwnsGamepass(contributor, "VIP") then 1.5 else 1.0
+				local premMult = if contributor.MembershipType == Enum.MembershipType.Premium
+					then GameConfig.PREMIUM_COIN_MULTIPLIER
+					else 1.0
+
+				local totalCoinMult = aura.CoinMultiplier * rebCoinMult * vipMult * premMult * boss.BonusLootMultiplier
+				local coinsEarned = math.floor(boss.Def.RewardCoins * totalCoinMult)
+				local gemsEarned = math.floor(boss.Def.RewardGems * boss.BonusLootMultiplier)
+				local fastRollsEarned = math.floor(boss.Def.RewardFastRolls * boss.BonusLootMultiplier)
+
+				profile.Coins += coinsEarned
+				profile.Gems += gemsEarned
+				profile.FastRollTokens += fastRollsEarned
+				profile.BossKills += 1
+				DataManager.MarkDirty(contributor)
+
+				if CombatAndBossServer.OnBossDefeated then
+					CombatAndBossServer.OnBossDefeated(
+						contributor,
+						boss.Def.Name,
+						coinsEarned,
+						gemsEarned,
+						fastRollsEarned
+					)
+				end
+			end
+		end
+	end
+
+	if CombatAndBossServer.OnBossStateChanged then
+		CombatAndBossServer.OnBossStateChanged("Respawning in 8s...", 0, 100, Color3.fromRGB(140, 150, 175))
+	end
+end
+
+function CombatAndBossServer.StartDirectorLoop()
+	task.spawn(function()
+		while true do
+			if not CombatAndBossServer.CurrentBoss then
+				CombatAndBossServer.BossCounter += 1
+				local idx = ((CombatAndBossServer.BossCounter - 1) % #GameConfig.Bosses) + 1
+				CombatAndBossServer.SpawnBoss(GameConfig.Bosses[idx], 1.0)
+			else
+				-- Boss idle hover + periodic shockwave ring visual
+				local boss = CombatAndBossServer.CurrentBoss
+				if boss and boss.CorePart.Parent then
+					local pulse = Instance.new("Part")
+					pulse.Name = "BossPulseRing"
+					pulse.Anchored = true
+					pulse.CanCollide = false
+					pulse.Shape = Enum.PartType.Cylinder
+					pulse.Color = boss.Def.PrimaryColor
+					pulse.Material = Enum.Material.Neon
+					pulse.Transparency = 0.45
+					pulse.Size = Vector3.new(0.4, 16, 16)
+					pulse.CFrame = CFrame.new(ARENA_CENTER.X, 1.6, ARENA_CENTER.Z) * CFrame.Angles(0, 0, math.rad(90))
+					pulse.Parent = Workspace
+					task.delay(0.55, function()
+						if pulse.Parent then
+							pulse:Destroy()
+						end
+					end)
+				end
+			end
+			task.wait(8)
+		end
+	end)
+end
+
+return CombatAndBossServer
+]]></ProtectedString>
+				</Properties>
+			</Item>
+			<Item class="Script" referent="RBX_SCRIPT_GAMESERVER">
+				<Properties>
+					<string name="Name">GameServer</string>
+					<ProtectedString name="Source"><![CDATA[--!strict
+--[[
+	GameServer.server.luau
+	Master Server Script for AURA BLADE: RNG & BOSS ARENA.
+	Wires ReplicatedStorage RemoteEvents/RemoteFunctions, Player lifecycle,
+	Rolling, Auto-Roll loop, Rebirths, Gem Shop, Daily Streak, Promo Codes,
+	3D World generation, Character Auras, and Arena Boss combat.
+]]
+
+local Players = game:GetService("Players")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+
+local Shared = ReplicatedStorage:WaitForChild("Shared")
+local GameConfig = require(Shared:WaitForChild("GameConfig"))
+local RollEngine = require(Shared:WaitForChild("RollEngine"))
+
+local DataManager = require(script.Parent:WaitForChild("DataManager"))
+local MonetizationServer = require(script.Parent:WaitForChild("MonetizationServer"))
+local VisualAuraBuilder = require(script.Parent:WaitForChild("VisualAuraBuilder"))
+local WorldBuilder = require(script.Parent:WaitForChild("WorldBuilder"))
+local CombatAndBossServer = require(script.Parent:WaitForChild("CombatAndBossServer"))
+
+-- Create RemoteEvents & RemoteFunctions Folder
+local remotesFolder = ReplicatedStorage:FindFirstChild("Remotes") :: Folder?
+if not remotesFolder then
+	remotesFolder = Instance.new("Folder")
+	remotesFolder.Name = "Remotes"
+	remotesFolder.Parent = ReplicatedStorage
+end
+
+local function createRemoteEvent(name: string): RemoteEvent
+	local existing = (remotesFolder :: Folder):FindFirstChild(name) :: RemoteEvent?
+	if existing then
+		return existing
+	end
+	local ev = Instance.new("RemoteEvent")
+	ev.Name = name
+	ev.Parent = remotesFolder
+	return ev
+end
+
+local function createRemoteFunction(name: string): RemoteFunction
+	local existing = (remotesFolder :: Folder):FindFirstChild(name) :: RemoteFunction?
+	if existing then
+		return existing
+	end
+	local fn = Instance.new("RemoteFunction")
+	fn.Name = name
+	fn.Parent = remotesFolder
+	return fn
+end
+
+local StateSyncEvent = createRemoteEvent("StateSync")
+local RollResultEvent = createRemoteEvent("RollResult")
+local ServerAnnounceEvent = createRemoteEvent("ServerAnnounce")
+local CombatSlashEvent = createRemoteEvent("CombatSlash")
+local CombatHitFeedbackEvent = createRemoteEvent("CombatHitFeedback")
+local BossStateEvent = createRemoteEvent("BossState")
+local ActionRequestFunc = createRemoteFunction("ActionRequest")
+
+-- Timed Per-Player Buff Tracking (Sky Obby & VIP Fountain)
+local obbyBuffExpiry: { [Player]: number } = {}
+local vipFountainExpiry: { [Player]: number } = {}
+local lastRollTimestamp: { [Player]: number } = {}
+
+local function getObbyRemaining(player: Player): number
+	return math.max(0, (obbyBuffExpiry[player] or 0) - os.time())
+end
+
+local function getVipFountainRemaining(player: Player): number
+	return math.max(0, (vipFountainExpiry[player] or 0) - os.time())
+end
+
+local function buildLuckContext(player: Player, profile: DataManager.PlayerProfile, usePotion: boolean): RollEngine.LuckContext
+	return {
+		RebirthLevel = profile.Rebirths,
+		OwnsDoubleLuck = MonetizationServer.OwnsGamepass(player, "DoubleLuck"),
+		OwnsVIP = MonetizationServer.OwnsGamepass(player, "VIP"),
+		IsPremium = (player.MembershipType == Enum.MembershipType.Premium),
+		FriendsInServer = MonetizationServer.CountFriendsInServer(player),
+		HasObbyBuff = getObbyRemaining(player) > 0,
+		HasVipFountainBuff = getVipFountainRemaining(player) > 0,
+		ServerBoostActive = MonetizationServer.IsServerBoostActive(),
+		UseHeavenlyPotion = usePotion,
+		TotalRolls = profile.TotalRolls,
+	}
+end
+
+local function syncPlayerState(player: Player)
+	local profile = DataManager.GetProfile(player)
+	if not profile then
+		return
+	end
+	local luckCtx = buildLuckContext(player, profile, false)
+	local luckBreakdown = RollEngine.ComputeLuck(luckCtx)
+
+	StateSyncEvent:FireClient(player, {
+		Profile = profile,
+		MaxVaultSlots = DataManager.GetMaxVaultSlots(player),
+		TotalLuck = luckBreakdown.TotalLuck,
+		ObbyBuffRemaining = getObbyRemaining(player),
+		VipFountainRemaining = getVipFountainRemaining(player),
+		ServerBoostRemaining = MonetizationServer.GetServerBoostRemaining(),
+		ServerBoostSponsor = MonetizationServer.ServerBoostSponsor,
+		FriendsInServer = luckCtx.FriendsInServer,
+		IsPremium = luckCtx.IsPremium,
+	})
+end
+
+local function refreshCharacterVisuals(player: Player)
+	local profile = DataManager.GetProfile(player)
+	if not profile then
+		return
+	end
+	VisualAuraBuilder.ApplyAuraToCharacter(
+		player,
+		profile.EquippedAuraId,
+		profile.Rebirths,
+		MonetizationServer.OwnsGamepass(player, "VIP")
+	)
+end
+
+local function performPlayerRoll(player: Player, useHeavenlyPotion: boolean, useFastToken: boolean): (boolean, string)
+	local profile = DataManager.GetProfile(player)
+	if not profile then
+		return false, "Profile still loading..."
+	end
+
+	local now = os.clock()
+	local ownsFast = MonetizationServer.OwnsGamepass(player, "FastRoll")
+	local cooldown = if ownsFast then GameConfig.FAST_ROLL_COOLDOWN else GameConfig.BASE_ROLL_COOLDOWN
+
+	if useFastToken and profile.FastRollTokens > 0 then
+		profile.FastRollTokens -= 1
+		cooldown = 0.12
+	end
+
+	if (lastRollTimestamp[player] or 0) + cooldown > now then
+		return false, "Roll cooling down!"
+	end
+	lastRollTimestamp[player] = now
+
+	local consumePotion = false
+	if useHeavenlyPotion and profile.HeavenlyPotions > 0 then
+		profile.HeavenlyPotions -= 1
+		consumePotion = true
+	end
+
+	local tripleRoll = MonetizationServer.OwnsGamepass(player, "TripleRoll")
+	local ctx = buildLuckContext(player, profile, consumePotion)
+	local bestAura, allRolled, breakdown = RollEngine.RollBatch(ctx, tripleRoll)
+
+	profile.TotalRolls += #allRolled
+
+	-- Passive Coin gain per roll (scales with Aura + Rebirth + VIP + Premium)
+	local equippedAura = GameConfig.GetAuraById(profile.EquippedAuraId)
+	local rebInfo = GameConfig.GetRebirthTier(profile.Rebirths)
+	local rebMult = if rebInfo then rebInfo.PermanentCoinMultiplier else 1.0
+	local vipMult = if MonetizationServer.OwnsGamepass(player, "VIP") then 1.5 else 1.0
+	local premMult = if player.MembershipType == Enum.MembershipType.Premium
+		then GameConfig.PREMIUM_COIN_MULTIPLIER
+		else 1.0
+	local coinsFromRoll = math.max(1, math.floor(5 * equippedAura.CoinMultiplier * rebMult * vipMult * premMult))
+	profile.Coins += coinsFromRoll
+
+	-- Add newly rolled Aura to Vault if not already owned (and within capacity)
+	local maxSlots = DataManager.GetMaxVaultSlots(player)
+	if not table.find(profile.OwnedAuras, bestAura.Id) then
+		if #profile.OwnedAuras < maxSlots then
+			table.insert(profile.OwnedAuras, bestAura.Id)
+		elseif bestAura.OneIn > profile.BestAuraOneIn then
+			-- Always guarantee space for a new personal-best Aura!
+			table.insert(profile.OwnedAuras, bestAura.Id)
+		end
+	end
+
+	-- Auto-equip if strictly rarer than current best
+	if bestAura.OneIn > profile.BestAuraOneIn then
+		profile.BestAuraId = bestAura.Id
+		profile.BestAuraOneIn = bestAura.OneIn
+		profile.EquippedAuraId = bestAura.Id
+		refreshCharacterVisuals(player)
+	end
+
+	-- Global Server Broadcast for 1-in-10,000+ Legendary / Mythic / Celestial rolls!
+	if bestAura.ServerAnnounce then
+		ServerAnnounceEvent:FireAllClients(
+			string.format(
+				"🌌 %s JUST ROLLED [%s] (1 IN %d) AT %.1fX LUCK! 🌌",
+				player.DisplayName,
+				string.upper(bestAura.Name),
+				bestAura.OneIn,
+				breakdown.TotalLuck
+			),
+			bestAura.PrimaryColor
+		)
+	end
+
+	DataManager.MarkDirty(player)
+	syncPlayerState(player)
+
+	local batchIds: { string } = {}
+	for _, a in ipairs(allRolled) do
+		table.insert(batchIds, a.Id)
+	end
+
+	RollResultEvent:FireClient(player, {
+		BestAuraId = bestAura.Id,
+		AllAuraIds = batchIds,
+		UsedPotion = consumePotion,
+		CoinsEarned = coinsFromRoll,
+		EffectiveLuck = breakdown.TotalLuck,
+	})
+
+	return true, bestAura.Name
+end
+
+-- Wire World Callbacks
+WorldBuilder.BuildWorld(
+	function(player: Player) -- Obby Summit Pad
+		local profile = DataManager.GetProfile(player)
+		if not profile then
+			return
+		end
+		obbyBuffExpiry[player] = os.time() + GameConfig.OBBY_BUFF_DURATION
+		profile.Coins += 500
+		profile.Gems += 25
+		DataManager.MarkDirty(player)
+		syncPlayerState(player)
+		ServerAnnounceEvent:FireClient(
+			player,
+			"🏆 Sky Obby Conquered! +100% (2X) Roll Luck for 5m + 500 Coins + 25 Gems!",
+			Color3.fromRGB(50, 255, 130)
+		)
+	end,
+	function(player: Player) -- VIP Fountain
+		local profile = DataManager.GetProfile(player)
+		if not profile then
+			return
+		end
+		if MonetizationServer.OwnsGamepass(player, "VIP") or profile.Rebirths >= 3 then
+			vipFountainExpiry[player] = os.time() + 300
+			syncPlayerState(player)
+			ServerAnnounceEvent:FireClient(
+				player,
+				"👑 VIP Sanctum Blessing Active: +35% Bonus Luck for 5 minutes!",
+				Color3.fromRGB(255, 215, 50)
+			)
+		else
+			MonetizationServer.PromptOrSimulatePurchase(player, "Gamepass", "VIP")
+		end
+	end,
+	function(player: Player, kind: string, key: string) -- 3D Shop Pedestals
+		local ok, msg = MonetizationServer.PromptOrSimulatePurchase(player, kind, key)
+		if ok then
+			ServerAnnounceEvent:FireClient(player, msg, Color3.fromRGB(0, 235, 255))
+		end
+	end
+)
+
+-- Wire Monetization & Boss Callbacks
+MonetizationServer.OnServerAnnouncement = function(msg: string, color: Color3)
+	ServerAnnounceEvent:FireAllClients(msg, color)
+	for _, p in ipairs(Players:GetPlayers()) do
+		syncPlayerState(p)
+	end
+end
+
+MonetizationServer.OnForceSpawnOmegaBoss = function(_player: Player)
+	local omegaDef = GameConfig.Bosses[#GameConfig.Bosses]
+	CombatAndBossServer.SpawnBoss(omegaDef, 3.0)
+end
+
+MonetizationServer.OnProfileUpdated = function(player: Player)
+	refreshCharacterVisuals(player)
+	syncPlayerState(player)
+end
+
+CombatAndBossServer.OnBossStateChanged = function(name: string, hp: number, maxHp: number, color: Color3)
+	BossStateEvent:FireAllClients({
+		Name = name,
+		HP = hp,
+		MaxHP = maxHp,
+		Color = color,
+	})
+end
+
+CombatAndBossServer.OnBossDefeated = function(player: Player, bossName: string, coins: number, gems: number, fastRolls: number)
+	syncPlayerState(player)
+	ServerAnnounceEvent:FireClient(
+		player,
+		string.format("⚔️ %s Defeated! +%d Coins, +%d Gems, +%d Fast Rolls!", bossName, coins, gems, fastRolls),
+		Color3.fromRGB(255, 195, 45)
+	)
+end
+
+-- Client Combat Slash RemoteEvent
+CombatSlashEvent.OnServerEvent:Connect(function(player: Player)
+	local hit, dmg, isCrit = CombatAndBossServer.HandlePlayerSlash(player)
+	if hit then
+		CombatHitFeedbackEvent:FireClient(player, dmg, isCrit)
+		syncPlayerState(player)
+	end
+end)
+
+-- Unified Client Action Request Handler
+ActionRequestFunc.OnServerInvoke = function(player: Player, action: string, payload: any): (boolean, string)
+	local profile = DataManager.GetProfile(player)
+	if not profile then
+		return false, "Profile not loaded yet"
+	end
+
+	if action == "Roll" then
+		local usePotion = type(payload) == "table" and payload.UsePotion == true
+		local useFast = type(payload) == "table" and payload.UseFastToken == true
+		return performPlayerRoll(player, usePotion, useFast)
+
+	elseif action == "ToggleAutoRoll" then
+		if not MonetizationServer.OwnsGamepass(player, "AutoRoll") and profile.Rebirths < 2 then
+			local ok, msg = MonetizationServer.PromptOrSimulatePurchase(player, "Gamepass", "AutoRoll")
+			return ok, msg
+		end
+		profile.AutoRollEnabled = not profile.AutoRollEnabled
+		DataManager.MarkDirty(player)
+		syncPlayerState(player)
+		return true, if profile.AutoRollEnabled then "Auto-Roll ENABLED" else "Auto-Roll PAUSED"
+
+	elseif action == "EquipAura" then
+		local auraId = tostring(payload)
+		if not table.find(profile.OwnedAuras, auraId) then
+			return false, "You don't own that Aura yet!"
+		end
+		profile.EquippedAuraId = auraId
+		DataManager.MarkDirty(player)
+		refreshCharacterVisuals(player)
+		syncPlayerState(player)
+		local aura = GameConfig.GetAuraById(auraId)
+		return true, "Equipped " .. aura.Name .. "!"
+
+	elseif action == "Rebirth" then
+		local nextTier = GameConfig.GetRebirthTier(profile.Rebirths + 1)
+		if not nextTier then
+			return false, "You have reached Maximum Rebirth (OMEGA DEITY)!"
+		end
+		if profile.Coins < nextTier.CoinCost then
+			return false, string.format("Need %d Flux Coins to Rebirth!", nextTier.CoinCost)
+		end
+		if profile.BestAuraOneIn < nextTier.RequiredAuraOneIn then
+			return false, string.format("Need a 1-in-%d+ Aura to Rebirth!", nextTier.RequiredAuraOneIn)
+		end
+
+		profile.Coins = 0
+		profile.Rebirths = nextTier.Level
+		profile.Gems += (nextTier.Level * 75)
+		profile.FastRollTokens += 5
+		DataManager.MarkDirty(player)
+		refreshCharacterVisuals(player)
+		syncPlayerState(player)
+
+		ServerAnnounceEvent:FireAllClients(
+			string.format("🔥 %s ascended to REBIRTH %d [%s]!", player.DisplayName, nextTier.Level, nextTier.Title),
+			Color3.fromRGB(255, 175, 40)
+		)
+		return true, string.format("Rebirth %d Unlocked: %s!", nextTier.Level, nextTier.Title)
+
+	elseif action == "BuyShopItem" then
+		if type(payload) ~= "table" then
+			return false, "Invalid request"
+		end
+		return MonetizationServer.PromptOrSimulatePurchase(player, tostring(payload.Kind), tostring(payload.Key))
+
+	elseif action == "BuyGemItem" then
+		local itemId = tostring(payload)
+		for _, item in ipairs(GameConfig.GemShopItems) do
+			if item.Id == itemId then
+				if profile.Gems < item.GemCost then
+					return false, "Not enough Luck Gems!"
+				end
+				profile.Gems -= item.GemCost
+				if itemId == "gem_heavenly_potion" then
+					profile.HeavenlyPotions += 1
+				elseif itemId == "gem_fast_rolls_25" then
+					profile.FastRollTokens += 25
+				elseif itemId == "gem_vault_slots_10" then
+					profile.BonusVaultSlots += 10
+				end
+				DataManager.MarkDirty(player)
+				syncPlayerState(player)
+				return true, "Purchased " .. item.Name .. "!"
+			end
+		end
+		return false, "Unknown Gem Shop item"
+
+	elseif action == "ClaimDaily" then
+		local currentDay = math.floor(os.time() / 86400)
+		if profile.LastDailyClaimDay == currentDay then
+			return false, "Daily Reward already claimed today! Come back tomorrow!"
+		end
+		if profile.LastDailyClaimDay == currentDay - 1 then
+			profile.DailyStreak = (profile.DailyStreak % #GameConfig.DailyRewards) + 1
+		else
+			profile.DailyStreak = 1
+		end
+		profile.LastDailyClaimDay = currentDay
+		local reward = GameConfig.DailyRewards[profile.DailyStreak]
+		profile.Coins += reward.Coins
+		profile.Gems += reward.Gems
+		profile.HeavenlyPotions += reward.Potions
+		DataManager.MarkDirty(player)
+		syncPlayerState(player)
+		return true, string.format("Day %d Claimed: %s!", reward.Day, reward.Label)
+
+	elseif action == "RedeemCode" then
+		local code = string.upper(string.gsub(tostring(payload or ""), "%s+", ""))
+		local codeReward = GameConfig.PromoCodes[code]
+		if not codeReward then
+			return false, "Invalid or expired code! Try: RELEASE, OMEGA2026, LUCKY777, CYBERBLADE"
+		end
+		if profile.RedeemedCodes[code] then
+			return false, "Code '" .. code .. "' already redeemed!"
+		end
+		profile.RedeemedCodes[code] = true
+		profile.Coins += codeReward.Coins
+		profile.Gems += codeReward.Gems
+		profile.HeavenlyPotions += codeReward.Potions
+		DataManager.MarkDirty(player)
+		syncPlayerState(player)
+		return true, string.format("Code %s: +%d Coins, +%d Gems, +%d Potions!", code, codeReward.Coins, codeReward.Gems, codeReward.Potions)
+
+	elseif action == "RequestState" then
+		syncPlayerState(player)
+		return true, "Synced"
+	end
+
+	return false, "Unknown action"
+end
+
+-- Player Lifecycle Connections
+local function onPlayerAdded(player: Player)
+	local profile = DataManager.LoadProfile(player)
+	MonetizationServer.SyncPlayerGamepasses(player)
+
+	player.CharacterAdded:Connect(function(_character)
+		task.wait(0.25)
+		refreshCharacterVisuals(player)
+	end)
+
+	if player.Character then
+		task.spawn(function()
+			refreshCharacterVisuals(player)
+		end)
+	end
+
+	task.delay(0.5, function()
+		if player.Parent then
+			syncPlayerState(player)
+			if CombatAndBossServer.CurrentBoss then
+				local b = CombatAndBossServer.CurrentBoss
+				BossStateEvent:FireClient(player, {
+					Name = b.Def.Name,
+					HP = b.CurrentHP,
+					MaxHP = b.MaxHP,
+					Color = b.Def.PrimaryColor,
+				})
+			end
+		end
+	end)
+	local _ = profile
+end
+
+Players.PlayerAdded:Connect(onPlayerAdded)
+for _, existingPlayer in ipairs(Players:GetPlayers()) do
+	task.spawn(onPlayerAdded, existingPlayer)
+end
+
+Players.PlayerRemoving:Connect(function(player: Player)
+	obbyBuffExpiry[player] = nil
+	vipFountainExpiry[player] = nil
+	lastRollTimestamp[player] = nil
+	DataManager.CleanupPlayer(player)
+end)
+
+-- Server Auto-Roll & Periodic HUD Sync Loop
+task.spawn(function()
+	while true do
+		task.wait(0.65)
+		for _, player in ipairs(Players:GetPlayers()) do
+			local profile = DataManager.GetProfile(player)
+			if profile and profile.AutoRollEnabled then
+				performPlayerRoll(player, false, false)
+			end
+		end
+	end
+end)
+
+MonetizationServer.Init()
+VisualAuraBuilder.StartOrbitLoop()
+DataManager.StartAutoSaveLoop()
+CombatAndBossServer.StartDirectorLoop()
+]]></ProtectedString>
+				</Properties>
+			</Item>
+		</Item>
+	</Item>
+	<Item class="StarterPlayer" referent="RBX_STARTERPLAYER">
+		<Properties>
+			<string name="Name">StarterPlayer</string>
+		</Properties>
+		<Item class="StarterPlayerScripts" referent="RBX_SPS">
+			<Properties>
+				<string name="Name">StarterPlayerScripts</string>
+			</Properties>
+			<Item class="LocalScript" referent="RBX_LOCALSCRIPT_CLIENT">
+				<Properties>
+					<string name="Name">GameClient</string>
+					<ProtectedString name="Source"><![CDATA[--!strict
+--[[
+	GameClient.client.luau
+	Complete Client HUD, Roll Animation, Mythic Cutscene, Modal Windows
+	(Aura Vault, Robux & Gem Store, Rebirth Sanctum, Codes & Daily Rewards),
+	and Active Sword Slash / Dash Controller for AURA BLADE: RNG & BOSS ARENA.
+]]
+
+local Players = game:GetService("Players")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local TweenService = game:GetService("TweenService")
+local UserInputService = game:GetService("UserInputService")
+
+local localPlayer = Players.LocalPlayer
+local playerGui = localPlayer:WaitForChild("PlayerGui")
+
+local Shared = ReplicatedStorage:WaitForChild("Shared")
+local GameConfig = require(Shared:WaitForChild("GameConfig"))
+
+local Remotes = ReplicatedStorage:WaitForChild("Remotes")
+local StateSyncEvent = Remotes:WaitForChild("StateSync") :: RemoteEvent
+local RollResultEvent = Remotes:WaitForChild("RollResult") :: RemoteEvent
+local ServerAnnounceEvent = Remotes:WaitForChild("ServerAnnounce") :: RemoteEvent
+local CombatSlashEvent = Remotes:WaitForChild("CombatSlash") :: RemoteEvent
+local CombatHitFeedbackEvent = Remotes:WaitForChild("CombatHitFeedback") :: RemoteEvent
+local BossStateEvent = Remotes:WaitForChild("BossState") :: RemoteEvent
+local ActionRequestFunc = Remotes:WaitForChild("ActionRequest") :: RemoteFunction
+
+-- Client Cached State
+local currentState: any = nil
+local usePotionArmed = false
+local activeModalName: string? = nil
+local lastDashTime = 0
+
+local function formatNumber(n: number): string
+	if n >= 1e9 then
+		return string.format("%.2fB", n / 1e9)
+	elseif n >= 1e6 then
+		return string.format("%.2fM", n / 1e6)
+	elseif n >= 1e3 then
+		return string.format("%.1fK", n / 1e3)
+	end
+	return tostring(math.floor(n))
+end
+
+local function formatCommas(n: number): string
+	local s = tostring(math.floor(n))
+	return (s:reverse():gsub("(%d%d%d)", "%1,"):reverse():gsub("^,", ""))
+end
+
+local function addCorner(inst: GuiObject, radius: number)
+	local c = Instance.new("UICorner")
+	c.CornerRadius = UDim.new(0, radius)
+	c.Parent = inst
+end
+
+local function addStroke(inst: GuiObject, color: Color3, thickness: number)
+	local s = Instance.new("UIStroke")
+	s.Color = color
+	s.Thickness = thickness
+	s.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+	s.Parent = inst
+end
+
+-- Create Root ScreenGui
+local existingGui = playerGui:FindFirstChild("AuraBladeHUD")
+if existingGui then
+	existingGui:Destroy()
+end
+
+local screenGui = Instance.new("ScreenGui")
+screenGui.Name = "AuraBladeHUD"
+screenGui.IgnoreGuiInset = true
+screenGui.ResetOnSpawn = false
+screenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+screenGui.Parent = playerGui
+
+-- 1. TOP CURRENCY & LUCK TELEMETRY BAR
+local topBar = Instance.new("Frame")
+topBar.Name = "TopBar"
+topBar.AnchorPoint = Vector2.new(0.5, 0)
+topBar.Position = UDim2.new(0.5, 0, 0, 14)
+topBar.Size = UDim2.new(0, 820, 0, 48)
+topBar.BackgroundColor3 = Color3.fromRGB(14, 17, 28)
+topBar.BackgroundTransparency = 0.12
+topBar.Parent = screenGui
+addCorner(topBar, 12)
+addStroke(topBar, Color3.fromRGB(0, 210, 255), 1.8)
+
+local topLayout = Instance.new("UIListLayout")
+topLayout.FillDirection = Enum.FillDirection.Horizontal
+topLayout.HorizontalAlignment = Enum.HorizontalAlignment.Center
+topLayout.VerticalAlignment = Enum.VerticalAlignment.Center
+topLayout.Padding = UDim.new(0, 14)
+topLayout.Parent = topBar
+
+local function createPillStat(text: string, color: Color3, width: number): TextLabel
+	local lbl = Instance.new("TextLabel")
+	lbl.Size = UDim2.new(0, width, 0, 34)
+	lbl.BackgroundColor3 = Color3.fromRGB(22, 27, 44)
+	lbl.Font = Enum.Font.GothamBold
+	lbl.Text = text
+	lbl.TextColor3 = color
+	lbl.TextSize = 15
+	lbl.Parent = topBar
+	addCorner(lbl, 8)
+	addStroke(lbl, color, 1)
+	return lbl
+end
+
+local coinsLabel = createPillStat("🪙 150 Coins", Color3.fromRGB(255, 210, 60), 165)
+local gemsLabel = createPillStat("💎 50 Gems", Color3.fromRGB(0, 225, 255), 155)
+local luckLabel = createPillStat("🍀 1.0x Luck", Color3.fromRGB(60, 255, 140), 155)
+local rebirthLabel = createPillStat("🔥 Rebirth 0", Color3.fromRGB(255, 120, 55), 145)
+local boostTimerLabel = createPillStat("⚡ No Party Boost", Color3.fromRGB(190, 105, 255), 160)
+
+-- 2. TOP BOSS HEALTH BAR BANNER
+local bossBanner = Instance.new("Frame")
+bossBanner.Name = "BossBanner"
+bossBanner.AnchorPoint = Vector2.new(0.5, 0)
+bossBanner.Position = UDim2.new(0.5, 0, 0, 70)
+bossBanner.Size = UDim2.new(0, 480, 0, 38)
+bossBanner.BackgroundColor3 = Color3.fromRGB(20, 14, 28)
+bossBanner.BackgroundTransparency = 0.15
+bossBanner.Parent = screenGui
+addCorner(bossBanner, 10)
+addStroke(bossBanner, Color3.fromRGB(255, 65, 95), 1.5)
+
+local bossFill = Instance.new("Frame")
+bossFill.Size = UDim2.new(1, 0, 1, 0)
+bossFill.BackgroundColor3 = Color3.fromRGB(200, 35, 65)
+bossFill.BackgroundTransparency = 0.35
+bossFill.BorderSizePixel = 0
+bossFill.Parent = bossBanner
+addCorner(bossFill, 10)
+
+local bossTitle = Instance.new("TextLabel")
+bossTitle.Size = UDim2.new(1, 0, 1, 0)
+bossTitle.BackgroundTransparency = 1
+bossTitle.Font = Enum.Font.GothamBlack
+bossTitle.Text = "⚔️ ARENA BOSS: MK-I Cyber Sentinel (450 / 450 HP) — Click / [F] to Slash!"
+bossTitle.TextColor3 = Color3.fromRGB(255, 240, 245)
+bossTitle.TextSize = 14
+bossTitle.ZIndex = 2
+bossTitle.Parent = bossBanner
+
+-- 3. TOAST / SERVER ANNOUNCEMENT BANNER
+local toastLabel = Instance.new("TextLabel")
+toastLabel.AnchorPoint = Vector2.new(0.5, 0)
+toastLabel.Position = UDim2.new(0.5, 0, 0, 116)
+toastLabel.Size = UDim2.new(0, 680, 0, 34)
+toastLabel.BackgroundColor3 = Color3.fromRGB(12, 16, 26)
+toastLabel.BackgroundTransparency = 0.2
+toastLabel.Font = Enum.Font.GothamBlack
+toastLabel.Text = "✨ Welcome to AURA BLADE! Press [ROLL AURA] below or Slash the Arena Boss!"
+toastLabel.TextColor3 = Color3.fromRGB(0, 235, 255)
+toastLabel.TextSize = 15
+toastLabel.Parent = screenGui
+addCorner(toastLabel, 8)
+
+local function showToast(msg: string, color: Color3)
+	toastLabel.Text = msg
+	toastLabel.TextColor3 = color
+	toastLabel.TextTransparency = 0
+	TweenService:Create(toastLabel, TweenInfo.new(0.25, Enum.EasingStyle.Back), {
+		Size = UDim2.new(0, 710, 0, 38),
+	}):Play()
+	task.delay(0.25, function()
+		TweenService:Create(toastLabel, TweenInfo.new(0.2), {
+			Size = UDim2.new(0, 680, 0, 34),
+		}):Play()
+	end)
+end
+
+-- 4. LEFT NAVIGATION DOCK (Vault, Shop, Rebirth, Daily/Codes)
+local leftDock = Instance.new("Frame")
+leftDock.AnchorPoint = Vector2.new(0, 0.5)
+leftDock.Position = UDim2.new(0, 16, 0.52, 0)
+leftDock.Size = UDim2.new(0, 150, 0, 250)
+leftDock.BackgroundTransparency = 1
+leftDock.Parent = screenGui
+
+local leftLayout = Instance.new("UIListLayout")
+leftLayout.Padding = UDim.new(0, 10)
+leftLayout.Parent = leftDock
+
+-- 5. BOTTOM ROLL & COMBAT ACTION DOCK
+local bottomDock = Instance.new("Frame")
+bottomDock.AnchorPoint = Vector2.new(0.5, 1)
+bottomDock.Position = UDim2.new(0.5, 0, 1, -18)
+bottomDock.Size = UDim2.new(0, 760, 0, 68)
+bottomDock.BackgroundColor3 = Color3.fromRGB(14, 18, 30)
+bottomDock.BackgroundTransparency = 0.1
+bottomDock.Parent = screenGui
+addCorner(bottomDock, 14)
+addStroke(bottomDock, Color3.fromRGB(0, 200, 255), 1.8)
+
+local bottomLayout = Instance.new("UIListLayout")
+bottomLayout.FillDirection = Enum.FillDirection.Horizontal
+bottomLayout.HorizontalAlignment = Enum.HorizontalAlignment.Center
+bottomLayout.VerticalAlignment = Enum.VerticalAlignment.Center
+bottomLayout.Padding = UDim.new(0, 10)
+bottomLayout.Parent = bottomDock
+
+local function createDockButton(parent: Instance, text: string, bg: Color3, size: UDim2): TextButton
+	local btn = Instance.new("TextButton")
+	btn.Size = size
+	btn.BackgroundColor3 = bg
+	btn.Font = Enum.Font.GothamBlack
+	btn.Text = text
+	btn.TextColor3 = Color3.fromRGB(255, 255, 255)
+	btn.TextSize = 15
+	btn.AutoButtonColor = true
+	btn.Parent = parent
+	addCorner(btn, 10)
+	addStroke(btn, Color3.fromRGB(255, 255, 255), 1.2)
+	return btn
+end
+
+local rollBtn = createDockButton(bottomDock, "🎲 ROLL AURA [R]", Color3.fromRGB(0, 175, 255), UDim2.new(0, 195, 0, 50))
+local autoRollBtn = createDockButton(bottomDock, "🤖 AUTO: OFF", Color3.fromRGB(115, 55, 220), UDim2.new(0, 145, 0, 50))
+local fastTokenBtn = createDockButton(bottomDock, "⚡ FAST ROLL (5)", Color3.fromRGB(235, 145, 20), UDim2.new(0, 150, 0, 50))
+local potionBtn = createDockButton(bottomDock, "🧪 +500% POTION (1)", Color3.fromRGB(195, 45, 235), UDim2.new(0, 165, 0, 50))
+local dashBtn = createDockButton(bottomDock, "💨 DASH [Q]", Color3.fromRGB(35, 195, 130), UDim2.new(0, 115, 0, 50))
+
+-- 6. MODAL WINDOW CONTAINER
+local modalFrame = Instance.new("Frame")
+modalFrame.Name = "ModalWindow"
+modalFrame.AnchorPoint = Vector2.new(0.5, 0.5)
+modalFrame.Position = UDim2.new(0.5, 0, 0.5, 0)
+modalFrame.Size = UDim2.new(0, 680, 0, 420)
+modalFrame.BackgroundColor3 = Color3.fromRGB(16, 20, 34)
+modalFrame.Visible = false
+modalFrame.Parent = screenGui
+addCorner(modalFrame, 14)
+addStroke(modalFrame, Color3.fromRGB(0, 220, 255), 2.2)
+
+local modalTitle = Instance.new("TextLabel")
+modalTitle.Position = UDim2.new(0, 20, 0, 12)
+modalTitle.Size = UDim2.new(1, -90, 0, 34)
+modalTitle.BackgroundTransparency = 1
+modalTitle.Font = Enum.Font.GothamBlack
+modalTitle.Text = "WINDOW"
+modalTitle.TextColor3 = Color3.fromRGB(0, 230, 255)
+modalTitle.TextSize = 22
+modalTitle.TextXAlignment = Enum.TextXAlignment.Left
+modalTitle.Parent = modalFrame
+
+local closeModalBtn = createDockButton(modalFrame, "✕", Color3.fromRGB(220, 45, 70), UDim2.new(0, 36, 0, 36))
+closeModalBtn.Position = UDim2.new(1, -48, 0, 12)
+
+local modalScroll = Instance.new("ScrollingFrame")
+modalScroll.Position = UDim2.new(0, 18, 0, 56)
+modalScroll.Size = UDim2.new(1, -36, 1, -72)
+modalScroll.BackgroundTransparency = 1
+modalScroll.BorderSizePixel = 0
+modalScroll.ScrollBarThickness = 6
+modalScroll.AutomaticCanvasSize = Enum.AutomaticSize.Y
+modalScroll.CanvasSize = UDim2.new(0, 0, 0, 0)
+modalScroll.Parent = modalFrame
+
+local modalListLayout = Instance.new("UIListLayout")
+modalListLayout.Padding = UDim.new(0, 8)
+modalListLayout.Parent = modalScroll
+
+local function clearModalContent()
+	for _, child in ipairs(modalScroll:GetChildren()) do
+		if not child:IsA("UIListLayout") then
+			child:Destroy()
+		end
+	end
+end
+
+local function populateModal(name: string)
+	clearModalContent()
+	local profile = if currentState then currentState.Profile else nil
+	if not profile then
+		return
+	end
+
+	if name == "Vault" then
+		modalTitle.Text = string.format("⚔️ AURA & BLADE VAULT (%d / %d Slots)", #profile.OwnedAuras, currentState.MaxVaultSlots or 24)
+		for _, auraId in ipairs(profile.OwnedAuras) do
+			local aura = GameConfig.GetAuraById(auraId)
+			local isEquipped = (profile.EquippedAuraId == aura.Id)
+
+			local row = Instance.new("Frame")
+			row.Size = UDim2.new(1, -12, 0, 58)
+			row.BackgroundColor3 = Color3.fromRGB(24, 30, 48)
+			row.Parent = modalScroll
+			addCorner(row, 10)
+			addStroke(row, aura.PrimaryColor, 1.4)
+
+			local infoLbl = Instance.new("TextLabel")
+			infoLbl.Position = UDim2.new(0, 14, 0, 6)
+			infoLbl.Size = UDim2.new(1, -150, 1, -12)
+			infoLbl.BackgroundTransparency = 1
+			infoLbl.Font = Enum.Font.GothamBold
+			infoLbl.TextXAlignment = Enum.TextXAlignment.Left
+			infoLbl.TextColor3 = aura.PrimaryColor
+			infoLbl.TextSize = 15
+			infoLbl.Text = string.format(
+				"★ %s [%s • 1 in %s]\n⚔️ %d DMG  |  🪙 %.2fx Coins  |  👟 +%d Speed",
+				aura.Name,
+				aura.Tier,
+				formatCommas(aura.OneIn),
+				aura.BaseDamage,
+				aura.CoinMultiplier,
+				aura.SpeedBonus
+			)
+			infoLbl.Parent = row
+
+			local eqBtn = createDockButton(
+				row,
+				if isEquipped then "EQUIPPED" else "EQUIP",
+				if isEquipped then Color3.fromRGB(45, 185, 95) else Color3.fromRGB(0, 165, 240),
+				UDim2.new(0, 115, 0, 38)
+			)
+			eqBtn.Position = UDim2.new(1, -128, 0.5, -19)
+			eqBtn.MouseButton1Click:Connect(function()
+				local ok, msg = ActionRequestFunc:InvokeServer("EquipAura", aura.Id)
+				showToast(msg, if ok then aura.PrimaryColor else Color3.fromRGB(255, 80, 80))
+				populateModal("Vault")
+			end)
+		end
+
+	elseif name == "Shop" then
+		modalTitle.Text = "💎 ROBUX GAMEPASSES, PARTY BOOSTS & GEM STORE"
+		for _, gp in ipairs(GameConfig.Gamepasses) do
+			local owned = profile.OwnedGamepasses[gp.Key] == true
+			local row = Instance.new("Frame")
+			row.Size = UDim2.new(1, -12, 0, 62)
+			row.BackgroundColor3 = Color3.fromRGB(24, 30, 50)
+			row.Parent = modalScroll
+			addCorner(row, 10)
+			addStroke(row, gp.AccentColor, 1.5)
+
+			local lbl = Instance.new("TextLabel")
+			lbl.Position = UDim2.new(0, 14, 0, 6)
+			lbl.Size = UDim2.new(1, -165, 1, -12)
+			lbl.BackgroundTransparency = 1
+			lbl.Font = Enum.Font.GothamBold
+			lbl.TextXAlignment = Enum.TextXAlignment.Left
+			lbl.TextColor3 = gp.AccentColor
+			lbl.TextSize = 14
+			lbl.Text = string.format("[%s] %s\n%s", gp.IconText, gp.Name, gp.Description)
+			lbl.Parent = row
+
+			local buyBtn = createDockButton(
+				row,
+				if owned then "OWNED ✓" else string.format("R$ %d", gp.RobuxPrice),
+				if owned then Color3.fromRGB(50, 165, 90) else gp.AccentColor,
+				UDim2.new(0, 130, 0, 40)
+			)
+			buyBtn.Position = UDim2.new(1, -142, 0.5, -20)
+			buyBtn.MouseButton1Click:Connect(function()
+				local ok, msg = ActionRequestFunc:InvokeServer("BuyShopItem", { Kind = "Gamepass", Key = gp.Key })
+				showToast(msg, if ok then gp.AccentColor else Color3.fromRGB(255, 90, 90))
+				populateModal("Shop")
+			end)
+		end
+
+		for _, dp in ipairs(GameConfig.DevProducts) do
+			local row = Instance.new("Frame")
+			row.Size = UDim2.new(1, -12, 0, 60)
+			row.BackgroundColor3 = Color3.fromRGB(28, 24, 46)
+			row.Parent = modalScroll
+			addCorner(row, 10)
+			addStroke(row, dp.AccentColor, 1.3)
+
+			local lbl = Instance.new("TextLabel")
+			lbl.Position = UDim2.new(0, 14, 0, 6)
+			lbl.Size = UDim2.new(1, -165, 1, -12)
+			lbl.BackgroundTransparency = 1
+			lbl.Font = Enum.Font.GothamBold
+			lbl.TextXAlignment = Enum.TextXAlignment.Left
+			lbl.TextColor3 = dp.AccentColor
+			lbl.TextSize = 14
+			lbl.Text = string.format("⚡ %s\n%s", dp.Name, dp.Description)
+			lbl.Parent = row
+
+			local buyBtn = createDockButton(
+				row,
+				string.format("R$ %d", dp.RobuxPrice),
+				dp.AccentColor,
+				UDim2.new(0, 130, 0, 40)
+			)
+			buyBtn.Position = UDim2.new(1, -142, 0.5, -20)
+			buyBtn.MouseButton1Click:Connect(function()
+				local ok, msg = ActionRequestFunc:InvokeServer("BuyShopItem", { Kind = "DevProduct", Key = dp.Key })
+				showToast(msg, if ok then dp.AccentColor else Color3.fromRGB(255, 90, 90))
+			end)
+		end
+
+		for _, gItem in ipairs(GameConfig.GemShopItems) do
+			local row = Instance.new("Frame")
+			row.Size = UDim2.new(1, -12, 0, 56)
+			row.BackgroundColor3 = Color3.fromRGB(18, 32, 46)
+			row.Parent = modalScroll
+			addCorner(row, 10)
+			addStroke(row, Color3.fromRGB(0, 215, 255), 1.2)
+
+			local lbl = Instance.new("TextLabel")
+			lbl.Position = UDim2.new(0, 14, 0, 6)
+			lbl.Size = UDim2.new(1, -165, 1, -12)
+			lbl.BackgroundTransparency = 1
+			lbl.Font = Enum.Font.GothamBold
+			lbl.TextXAlignment = Enum.TextXAlignment.Left
+			lbl.TextColor3 = Color3.fromRGB(160, 235, 255)
+			lbl.TextSize = 14
+			lbl.Text = string.format("💎 %s\n%s", gItem.Name, gItem.Description)
+			lbl.Parent = row
+
+			local buyBtn = createDockButton(
+				row,
+				string.format("💎 %d", gItem.GemCost),
+				Color3.fromRGB(0, 165, 225),
+				UDim2.new(0, 130, 0, 38)
+			)
+			buyBtn.Position = UDim2.new(1, -142, 0.5, -19)
+			buyBtn.MouseButton1Click:Connect(function()
+				local ok, msg = ActionRequestFunc:InvokeServer("BuyGemItem", gItem.Id)
+				showToast(msg, if ok then Color3.fromRGB(0, 235, 255) else Color3.fromRGB(255, 90, 90))
+			end)
+		end
+
+	elseif name == "Rebirth" then
+		modalTitle.Text = "🔥 REBIRTH SANCTUM (Permanent Luck & Coin Multipliers)"
+		for _, tier in ipairs(GameConfig.Rebirths) do
+			local unlocked = profile.Rebirths >= tier.Level
+			local isNext = (profile.Rebirths + 1 == tier.Level)
+			local row = Instance.new("Frame")
+			row.Size = UDim2.new(1, -12, 0, 64)
+			row.BackgroundColor3 = Color3.fromRGB(26, 22, 38)
+			row.Parent = modalScroll
+			addCorner(row, 10)
+			addStroke(row, if unlocked then Color3.fromRGB(50, 235, 120) else Color3.fromRGB(255, 140, 45), 1.4)
+
+			local lbl = Instance.new("TextLabel")
+			lbl.Position = UDim2.new(0, 14, 0, 6)
+			lbl.Size = UDim2.new(1, -165, 1, -12)
+			lbl.BackgroundTransparency = 1
+			lbl.Font = Enum.Font.GothamBold
+			lbl.TextXAlignment = Enum.TextXAlignment.Left
+			lbl.TextColor3 = Color3.fromRGB(245, 235, 255)
+			lbl.TextSize = 14
+			lbl.Text = string.format(
+				"Rebirth %d: [%s] — Cost: %s Coins & 1-in-%s Aura\nRewards: +%.0f%% Base Luck | %.2fx Coins | +%d Vault Slots",
+				tier.Level,
+				tier.Title,
+				formatNumber(tier.CoinCost),
+				formatCommas(tier.RequiredAuraOneIn),
+				tier.PermanentLuckBonus * 100,
+				tier.PermanentCoinMultiplier,
+				tier.BonusInventorySlots
+			)
+			lbl.Parent = row
+
+			if isNext then
+				local rebBtn = createDockButton(row, "ASCEND NOW", Color3.fromRGB(255, 130, 35), UDim2.new(0, 135, 0, 40))
+				rebBtn.Position = UDim2.new(1, -146, 0.5, -20)
+				rebBtn.MouseButton1Click:Connect(function()
+					local ok, msg = ActionRequestFunc:InvokeServer("Rebirth")
+					showToast(msg, if ok then Color3.fromRGB(255, 195, 50) else Color3.fromRGB(255, 85, 85))
+					populateModal("Rebirth")
+				end)
+			end
+		end
+
+	elseif name == "Codes" then
+		modalTitle.Text = "🎁 DAILY LOGIN STREAK & PROMO CODES"
+		local dailyBtn = createDockButton(
+			modalScroll,
+			"📅 CLAIM DAILY STREAK REWARD",
+			Color3.fromRGB(40, 195, 115),
+			UDim2.new(1, -12, 0, 48)
+		)
+		dailyBtn.MouseButton1Click:Connect(function()
+			local ok, msg = ActionRequestFunc:InvokeServer("ClaimDaily")
+			showToast(msg, if ok then Color3.fromRGB(60, 255, 140) else Color3.fromRGB(255, 120, 90))
+		end)
+
+		local codeList = { "RELEASE", "OMEGA2026", "LUCKY777", "CYBERBLADE" }
+		for _, code in ipairs(codeList) do
+			local already = profile.RedeemedCodes[code] == true
+			local info = GameConfig.PromoCodes[code]
+			local btn = createDockButton(
+				modalScroll,
+				string.format(
+					"%s — %s (%s)",
+					code,
+					info.Description,
+					if already then "REDEEMED ✓" else "CLICK TO REDEEM!"
+				),
+				if already then Color3.fromRGB(55, 65, 85) else Color3.fromRGB(0, 155, 235),
+				UDim2.new(1, -12, 0, 46)
+			)
+			btn.MouseButton1Click:Connect(function()
+				local ok, msg = ActionRequestFunc:InvokeServer("RedeemCode", code)
+				showToast(msg, if ok then Color3.fromRGB(0, 235, 255) else Color3.fromRGB(255, 95, 95))
+				populateModal("Codes")
+			end)
+		end
+	end
+end
+
+local function toggleModal(name: string)
+	if activeModalName == name and modalFrame.Visible then
+		modalFrame.Visible = false
+		activeModalName = nil
+	else
+		activeModalName = name
+		modalFrame.Visible = true
+		populateModal(name)
+	end
+end
+
+closeModalBtn.MouseButton1Click:Connect(function()
+	modalFrame.Visible = false
+	activeModalName = nil
+end)
+
+local navButtons = {
+	{ Label = "🎒 AURA VAULT", Modal = "Vault", Color = Color3.fromRGB(0, 165, 235) },
+	{ Label = "💎 ROBUX SHOP", Modal = "Shop", Color = Color3.fromRGB(45, 205, 120) },
+	{ Label = "🔥 REBIRTHS", Modal = "Rebirth", Color = Color3.fromRGB(245, 125, 35) },
+	{ Label = "🎁 FREE CODES", Modal = "Codes", Color = Color3.fromRGB(180, 75, 245) },
+}
+
+for _, nav in ipairs(navButtons) do
+	local b = createDockButton(leftDock, nav.Label, nav.Color, UDim2.new(1, 0, 0, 50))
+	b.MouseButton1Click:Connect(function()
+		toggleModal(nav.Modal)
+	end)
+end
+
+-- 7. MYTHIC / LEGENDARY FULL-SCREEN CUTSCENE OVERLAY
+local cutsceneOverlay = Instance.new("Frame")
+cutsceneOverlay.Size = UDim2.new(1, 0, 1, 0)
+cutsceneOverlay.BackgroundColor3 = Color3.fromRGB(5, 6, 12)
+cutsceneOverlay.BackgroundTransparency = 1
+cutsceneOverlay.Visible = false
+cutsceneOverlay.ZIndex = 20
+cutsceneOverlay.Parent = screenGui
+
+local cutsceneTitle = Instance.new("TextLabel")
+cutsceneTitle.AnchorPoint = Vector2.new(0.5, 0.5)
+cutsceneTitle.Position = UDim2.new(0.5, 0, 0.45, 0)
+cutsceneTitle.Size = UDim2.new(0.85, 0, 0, 90)
+cutsceneTitle.BackgroundTransparency = 1
+cutsceneTitle.Font = Enum.Font.GothamBlack
+cutsceneTitle.TextScaled = true
+cutsceneTitle.ZIndex = 21
+cutsceneTitle.Parent = cutsceneOverlay
+
+local cutsceneSub = Instance.new("TextLabel")
+cutsceneSub.AnchorPoint = Vector2.new(0.5, 0.5)
+cutsceneSub.Position = UDim2.new(0.5, 0, 0.58, 0)
+cutsceneSub.Size = UDim2.new(0.7, 0, 0, 44)
+cutsceneSub.BackgroundTransparency = 1
+cutsceneSub.Font = Enum.Font.GothamBold
+cutsceneSub.TextColor3 = Color3.fromRGB(240, 245, 255)
+cutsceneSub.TextScaled = true
+cutsceneSub.ZIndex = 21
+cutsceneSub.Parent = cutsceneOverlay
+
+local function playMythicCutscene(aura: GameConfig.AuraDefinition)
+	cutsceneOverlay.Visible = true
+	cutsceneOverlay.BackgroundTransparency = 0.15
+	cutsceneTitle.TextColor3 = aura.PrimaryColor
+	cutsceneTitle.Text = string.format("★ %s ★", string.upper(aura.Name))
+	cutsceneSub.Text = string.format("%s TIER  •  1 IN %s ODDS!", string.upper(aura.Tier), formatCommas(aura.OneIn))
+
+	TweenService:Create(cutsceneOverlay, TweenInfo.new(1.8, Enum.EasingStyle.Quad, Enum.EasingDirection.In), {
+		BackgroundTransparency = 1,
+	}):Play()
+	task.delay(1.85, function()
+		cutsceneOverlay.Visible = false
+	end)
+end
+
+-- 8. WIRE ROLL, AUTO-ROLL, POTION, FAST-ROLL & DASH ACTIONS
+local function triggerRoll(useFastToken: boolean)
+	local ok, msg = ActionRequestFunc:InvokeServer("Roll", {
+		UsePotion = usePotionArmed,
+		UseFastToken = useFastToken,
+	})
+	if ok then
+		usePotionArmed = false
+	else
+		showToast(msg, Color3.fromRGB(255, 110, 90))
+	end
+end
+
+rollBtn.MouseButton1Click:Connect(function()
+	triggerRoll(false)
+end)
+
+fastTokenBtn.MouseButton1Click:Connect(function()
+	triggerRoll(true)
+end)
+
+potionBtn.MouseButton1Click:Connect(function()
+	usePotionArmed = not usePotionArmed
+	potionBtn.BackgroundColor3 = if usePotionArmed
+		then Color3.fromRGB(50, 235, 130)
+		else Color3.fromRGB(195, 45, 235)
+	showToast(
+		if usePotionArmed
+			then "🧪 Singularity Potion ARMED (+500% Luck on next Roll)!"
+			else "🧪 Singularity Potion disarmed.",
+		Color3.fromRGB(215, 110, 255)
+	)
+end)
+
+autoRollBtn.MouseButton1Click:Connect(function()
+	local ok, msg = ActionRequestFunc:InvokeServer("ToggleAutoRoll")
+	showToast(msg, if ok then Color3.fromRGB(165, 110, 255) else Color3.fromRGB(255, 95, 95))
+end)
+
+local function performDash()
+	local now = os.clock()
+	if now - lastDashTime < 1.4 then
+		return
+	end
+	lastDashTime = now
+	local char = localPlayer.Character
+	local root = if char then char:FindFirstChild("HumanoidRootPart") :: BasePart? else nil
+	if root then
+		root.AssemblyLinearVelocity = (root.CFrame.LookVector * 88) + Vector3.new(0, 18, 0)
+	end
+end
+
+dashBtn.MouseButton1Click:Connect(performDash)
+
+-- Keyboard & Mouse Combat / Roll Shortcuts
+UserInputService.InputBegan:Connect(function(input, gameProcessed)
+	if gameProcessed then
+		return
+	end
+	if input.KeyCode == Enum.KeyCode.R then
+		triggerRoll(false)
+	elseif input.KeyCode == Enum.KeyCode.Q then
+		performDash()
+	elseif input.KeyCode == Enum.KeyCode.F or input.UserInputType == Enum.UserInputType.MouseButton1 then
+		CombatSlashEvent:FireServer()
+	end
+end)
+
+-- 9. SERVER EVENT LISTENERS
+StateSyncEvent.OnClientEvent:Connect(function(state: any)
+	currentState = state
+	local p = state.Profile
+	coinsLabel.Text = string.format("🪙 %s Coins", formatNumber(p.Coins))
+	gemsLabel.Text = string.format("💎 %s Gems", formatNumber(p.Gems))
+	luckLabel.Text = string.format("🍀 %.2fx Luck", state.TotalLuck or 1.0)
+	rebirthLabel.Text = string.format("🔥 Rebirth %d", p.Rebirths)
+
+	if (state.ServerBoostRemaining or 0) > 0 then
+		boostTimerLabel.Text = string.format("🎉 2x Party: %ds", state.ServerBoostRemaining)
+	elseif (state.ObbyBuffRemaining or 0) > 0 then
+		boostTimerLabel.Text = string.format("🏃 2x Obby: %ds", state.ObbyBuffRemaining)
+	else
+		boostTimerLabel.Text = string.format("👥 Friends: +%d%%", (state.FriendsInServer or 0) * 10)
+	end
+
+	autoRollBtn.Text = if p.AutoRollEnabled then "🤖 AUTO: ON" else "🤖 AUTO: OFF"
+	autoRollBtn.BackgroundColor3 = if p.AutoRollEnabled
+		then Color3.fromRGB(45, 200, 110)
+		else Color3.fromRGB(115, 55, 220)
+	fastTokenBtn.Text = string.format("⚡ FAST ROLL (%d)", p.FastRollTokens)
+	potionBtn.Text = string.format(
+		"🧪 %s (%d)",
+		if usePotionArmed then "ARMED!" else "+500% POTION",
+		p.HeavenlyPotions
+	)
+
+	if activeModalName and modalFrame.Visible then
+		populateModal(activeModalName)
+	end
+end)
+
+RollResultEvent.OnClientEvent:Connect(function(result: any)
+	local bestAura = GameConfig.GetAuraById(result.BestAuraId)
+	local count = if result.AllAuraIds then #result.AllAuraIds else 1
+	local prefix = if count > 1 then string.format("[%dx Roll Best] ", count) else ""
+	showToast(
+		string.format(
+			"🎲 %sRolled [%s] (%s • 1 in %s)  |  +%d Coins!",
+			prefix,
+			bestAura.Name,
+			bestAura.Tier,
+			formatCommas(bestAura.OneIn),
+			result.CoinsEarned or 0
+		),
+		bestAura.PrimaryColor
+	)
+	if bestAura.HasCutscene then
+		playMythicCutscene(bestAura)
+	end
+end)
+
+ServerAnnounceEvent.OnClientEvent:Connect(function(msg: string, color: Color3)
+	showToast(msg, color)
+end)
+
+CombatHitFeedbackEvent.OnClientEvent:Connect(function(dmg: number, isCrit: boolean)
+	showToast(
+		string.format("⚔️ %sHit Boss for %d Damage! (+Coins)", if isCrit then "CRITICAL STRIKE! " else "", dmg),
+		if isCrit then Color3.fromRGB(255, 215, 45) else Color3.fromRGB(0, 225, 255)
+	)
+end)
+
+BossStateEvent.OnClientEvent:Connect(function(info: any)
+	local ratio = if info.MaxHP > 0 then math.clamp(info.HP / info.MaxHP, 0, 1) else 0
+	bossFill.Size = UDim2.new(ratio, 0, 1, 0)
+	bossFill.BackgroundColor3 = info.Color or Color3.fromRGB(200, 35, 65)
+	bossTitle.Text = string.format(
+		"⚔️ %s (%d / %d HP) — Click or Press [F] in Arena to Slash!",
+		info.Name,
+		math.max(0, math.floor(info.HP)),
+		info.MaxHP
+	)
+end)
+
+task.defer(function()
+	ActionRequestFunc:InvokeServer("RequestState")
+end)
+]]></ProtectedString>
+				</Properties>
+			</Item>
+		</Item>
+	</Item>
+</roblox>
