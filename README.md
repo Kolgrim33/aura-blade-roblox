@@ -6,6 +6,19 @@ You can open **`AuraBladeRNG.rbxlx`** directly in Roblox Studio (or sync via [Ro
 
 ---
 
+## 🖼️ Promotional Icon & Thumbnails (`assets/`)
+
+All promotional artwork in [`assets/`](./assets/) is formatted to exact Roblox Creator Dashboard specifications (**512×512 PNG** for the Game Icon and **1920×1080 16:9 PNG** for the 3 Experience Thumbnails):
+
+| Asset File | Resolution | Preview |
+| :--- | :---: | :---: |
+| **[`assets/game_icon_512x512.png`](./assets/game_icon_512x512.png)**<br>*(Experience Icon — Cyber Samurai & 1 in 1,000,000 Aura)* | `512 × 512` (1:1 PNG) | <img src="assets/game_icon_512x512.png" width="220" alt="Aura Blade Game Icon 512x512" /> |
+| **[`assets/thumbnail_1_boss_arena.png`](./assets/thumbnail_1_boss_arena.png)**<br>*(Thumbnail 1 — Boss Colosseum Arena)* | `1920 × 1080` (16:9 PNG) | <img src="assets/thumbnail_1_boss_arena.png" width="380" alt="Thumbnail 1 - Boss Colosseum Arena" /> |
+| **[`assets/thumbnail_2_mythic_roll.png`](./assets/thumbnail_2_mythic_roll.png)**<br>*(Thumbnail 2 — 1 in 1,000,000 Chrono Sovereign Mythic Roll)* | `1920 × 1080` (16:9 PNG) | <img src="assets/thumbnail_2_mythic_roll.png" width="380" alt="Thumbnail 2 - Mythic Roll" /> |
+| **[`assets/thumbnail_3_sky_obby_vip.png`](./assets/thumbnail_3_sky_obby_vip.png)**<br>*(Thumbnail 3 — 2X Luck Sky Obby & Golden VIP Sanctum)* | `1920 × 1080` (16:9 PNG) | <img src="assets/thumbnail_3_sky_obby_vip.png" width="380" alt="Thumbnail 3 - Sky Obby and VIP Sanctum" /> |
+
+---
+
 ## 💰 Why This Game Architecture Prints Robux
 
 1. **Dual-Core Gameplay Loop (AFK RNG + Active Arena Bosses):**

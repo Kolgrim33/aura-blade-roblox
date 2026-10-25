@@ -1,8 +1,8 @@
 {
   "_comment": "Copy this file to monetization_ids.json and replace placeholder IDs with your real Roblox Creator Dashboard Gamepass & Developer Product IDs, then run: python3 scripts/publish_roblox.py",
   "studio_sandbox_purchases": false,
-  "universe_id": 0,
-  "place_id": 0,
+  "universe_id": 6265819886,
+  "place_id": 18490118268,
   "Gamepasses": {
     "DoubleLuck": 100000001,
     "FastRoll": 100000002,
@@ -21,20 +21,56 @@
   },
   "_pricing_reference": {
     "Gamepasses": {
-      "DoubleLuck": { "name": "2x Luck Forever", "robux": 199 },
-      "FastRoll": { "name": "Fast Roll + Skip Cutscene", "robux": 149 },
-      "AutoRoll": { "name": "Auto-Roll + AFK Guard", "robux": 99 },
-      "TripleRoll": { "name": "Triple Roll (3x At Once)", "robux": 399 },
-      "VIP": { "name": "VIP Cyber Sovereign", "robux": 499 },
-      "ExtraStorage": { "name": "+100 Aura Vault Slots", "robux": 129 }
+      "DoubleLuck": {
+        "name": "2x Luck Forever",
+        "robux": 199
+      },
+      "FastRoll": {
+        "name": "Fast Roll + Skip Cutscene",
+        "robux": 149
+      },
+      "AutoRoll": {
+        "name": "Auto-Roll + AFK Guard",
+        "robux": 99
+      },
+      "TripleRoll": {
+        "name": "Triple Roll (3x At Once)",
+        "robux": 399
+      },
+      "VIP": {
+        "name": "VIP Cyber Sovereign",
+        "robux": 499
+      },
+      "ExtraStorage": {
+        "name": "+100 Aura Vault Slots",
+        "robux": 129
+      }
     },
     "DevProducts": {
-      "ServerLuckBoost": { "name": "2x Server Luck Party (15m)", "robux": 99 },
-      "HeavenlyPotion": { "name": "Singularity Luck Potion (+500%)", "robux": 49 },
-      "SummonOmegaBoss": { "name": "Summon Omega Mech Boss", "robux": 79 },
-      "GemPackSmall": { "name": "1,500 Luck Gems", "robux": 49 },
-      "GemPackMedium": { "name": "6,000 Luck Gems (+20% Bonus)", "robux": 169 },
-      "GemPackMega": { "name": "25,000 Luck Gems (MEGA VAULT)", "robux": 599 }
+      "ServerLuckBoost": {
+        "name": "2x Server Luck Party (15m)",
+        "robux": 99
+      },
+      "HeavenlyPotion": {
+        "name": "Singularity Luck Potion (+500%)",
+        "robux": 49
+      },
+      "SummonOmegaBoss": {
+        "name": "Summon Omega Mech Boss",
+        "robux": 79
+      },
+      "GemPackSmall": {
+        "name": "1,500 Luck Gems",
+        "robux": 49
+      },
+      "GemPackMedium": {
+        "name": "6,000 Luck Gems (+20% Bonus)",
+        "robux": 169
+      },
+      "GemPackMega": {
+        "name": "25,000 Luck Gems (MEGA VAULT)",
+        "robux": 599
+      }
     }
   }
 }
